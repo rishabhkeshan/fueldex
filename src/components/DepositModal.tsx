@@ -54,23 +54,23 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-20">
-      <div className="bg-fuel-dark-800 w-full max-w-lg rounded-2xl shadow-2xl mx-4 border border-fuel-dark-600">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center sm:pt-20">
+      <div className="bg-fuel-dark-800 w-full h-full sm:h-auto sm:max-w-lg sm:rounded-2xl shadow-2xl sm:mx-4 border border-fuel-dark-600 overflow-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-fuel-dark-600">
-          <h2 className="text-xl font-semibold">Deposit</h2>
+        <div className="sticky top-0 z-10 bg-fuel-dark-800 flex items-center justify-between p-4 sm:p-6 border-b border-fuel-dark-600">
+          <h2 className="text-lg sm:text-xl font-semibold">Deposit</h2>
           <button 
             onClick={onClose}
-            className="p-2 hover:bg-fuel-dark-700 rounded-full transition-colors text-gray-400 hover:text-gray-300"
+            className="p-1.5 sm:p-2 hover:bg-fuel-dark-700 rounded-full transition-colors text-gray-400 hover:text-gray-300"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Network Selection */}
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <label className="text-sm text-gray-400 flex items-center space-x-2">
               <span>Network</span>
               <Info className="w-4 h-4 text-gray-500" />
@@ -90,7 +90,7 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
               </button>
               
               {isNetworkOpen && (
-                <div className="absolute w-full mt-2 bg-fuel-dark-700 rounded-xl border border-fuel-dark-600 shadow-xl z-10 py-2">
+                <div className="absolute w-[calc(100%-2rem)] sm:w-full mt-2 bg-fuel-dark-700 rounded-xl border border-fuel-dark-600 shadow-xl z-10 py-2">
                   {networks.map((network) => (
                     <button
                       key={network.id}
@@ -112,7 +112,7 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
           </div>
 
           {/* Token Selection */}
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <label className="text-sm text-gray-400 flex items-center space-x-2">
               <span>Token</span>
               <Info className="w-4 h-4 text-gray-500" />
@@ -132,7 +132,7 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
               </button>
 
               {isTokenOpen && (
-                <div className="absolute w-full mt-2 bg-fuel-dark-700 rounded-xl border border-fuel-dark-600 shadow-xl z-10 p-2">
+                <div className="absolute w-[calc(100%-2rem)] sm:w-full mt-2 bg-fuel-dark-700 rounded-xl border border-fuel-dark-600 shadow-xl z-10 p-2">
                   <div className="grid grid-cols-2 gap-2">
                     {tokens.map((token) => (
                       <button
@@ -154,36 +154,36 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
               )}
             </div>
 
-            {/* Quick Token Selection */}
-            <div className="flex flex-wrap gap-2">
+            {/* Quick Token Selection - Update grid for mobile */}
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
               {quickTokensData.map((token) => (
                 <button
                   key={token.symbol}
                   onClick={() => setSelectedToken(token.symbol)}
-                  className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  className={`flex items-center space-x-2 px-2 sm:px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     selectedToken === token.symbol 
                       ? 'bg-fuel-dark-600 text-fuel-green' 
                       : 'bg-fuel-dark-700 text-gray-400 hover:bg-fuel-dark-600 hover:text-gray-300'
                   }`}
                 >
-                  <div className={`w-5 h-5 rounded-full ${token.color} flex items-center justify-center`}>
+                  <div className={`w-4 sm:w-5 h-4 sm:h-5 rounded-full ${token.color} flex items-center justify-center`}>
                     <span className="text-white text-xs">{token.icon}</span>
                   </div>
-                  <span>{token.symbol}</span>
+                  <span className="text-xs sm:text-sm">{token.symbol}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Amount Input */}
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
+          <div className="space-y-2 sm:space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
               <label className="text-sm text-gray-400 flex items-center space-x-2">
                 <span>Amount</span>
                 <Info className="w-4 h-4 text-gray-500" />
               </label>
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-400">Available: 0 {selectedToken}</span>
+                <span className="text-xs sm:text-sm text-gray-400">Available: 0 {selectedToken}</span>
                 <button className="text-xs text-fuel-green font-medium hover:text-opacity-80">MAX</button>
               </div>
             </div>
@@ -199,7 +199,7 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
           </div>
 
           {/* Network Fee & APY */}
-          <div className="space-y-2 bg-fuel-dark-700 p-4 rounded-xl">
+          <div className="space-y-2 bg-fuel-dark-700 p-3 sm:p-4 rounded-xl text-xs sm:text-sm">
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-400">Network Fee</span>
@@ -216,8 +216,8 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
             </div>
           </div>
 
-          {/* Connect Button */}
-          <button className="w-full py-4 relative group">
+          {/* Connect Button - Update for mobile */}
+          <button className="w-full py-3 sm:py-4 relative group">
             {/* Gradient background with animated hover */}
             <div className="absolute inset-0 bg-gradient-to-r from-[#00FFA3] via-[#00FFD1] to-[#00D1FF] rounded-xl opacity-100 group-hover:opacity-90 transition-opacity" />
             
@@ -226,7 +226,7 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
             
             {/* Button content */}
             <div className="relative flex items-center justify-center space-x-2">
-              <span className="text-fuel-dark-900 font-semibold tracking-wide">
+              <span className="text-fuel-dark-900 font-semibold tracking-wide text-sm sm:text-base">
                 Connect Ethereum Wallet
               </span>
             </div>
@@ -238,3 +238,4 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
 }
 
 export default DepositModal; 
+

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { ArrowRightLeft, ChevronDown } from 'lucide-react';
 import { AdvancedChart } from "react-tradingview-embed";
 import FuelLogo from "./assets/Fuel.svg";
@@ -6,6 +6,8 @@ import TradingViewWidget from './components/TradingViewWidget';
 import WalletConnect from './components/WalletConnect';
 import SwapComponent from './components/SwapComponent';
 import DepositModal from './components/DepositModal';
+import { TradingService } from './services/tradingService';
+import { Order, Trade, OrderBook, ActiveOrder, HistoricalOrder } from './types/trading';
 
 // Mock data for the order book
 const mockOrderBook = {
@@ -86,24 +88,122 @@ function App() {
   const [isTokenSelectOpen, setIsTokenSelectOpen] = useState(false);
   const [activeScreen, setActiveScreen] = useState<'terminal' | 'swap'>('terminal');
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<'chart' | 'orderbook' | 'trades'>('chart');
+  const [mobileBottomView, setMobileBottomView] = useState<'orders' | 'history'>('orders');
+
+  const [orderBook, setOrderBook] = useState<OrderBook>({
+    asks: mockOrderBook.asks.map(ask => ({
+      id: Math.random().toString(36).substring(2, 15),
+      ...ask,
+      type: 'sell' as const,
+      timestamp: Date.now()
+    })),
+    bids: mockOrderBook.bids.map(bid => ({
+      id: Math.random().toString(36).substring(2, 15),
+      ...bid,
+      type: 'buy' as const,
+      timestamp: Date.now()
+    }))
+  });
+  
+  const [trades, setTrades] = useState<Trade[]>(mockTrades.map(trade => ({
+    ...trade,
+    type: Math.random() > 0.5 ? 'buy' : 'sell',
+    timestamp: Date.now()
+  })));
+
+  // Add new state for orders and history
+  const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
+  const [orderHistory, setOrderHistory] = useState<HistoricalOrder[]>([]);
+
+  const tradingService = useMemo(() => new TradingService(), []);
+
+  const handlePlaceOrder = useCallback(() => {
+    if (!price || !size) return;
+
+    const { trades: newTrades, updatedOrderBook, remainingOrder } = tradingService.createOrder(
+      tradeType,
+      parseFloat(price),
+      parseFloat(size),
+      orderBook
+    );
+
+    // Update orderbook
+    setOrderBook(updatedOrderBook);
+
+    // Update trades
+    if (newTrades.length > 0) {
+      setTrades(prev => [...newTrades, ...prev].slice(0, 30));
+    }
+
+    // Add to active orders if partially filled or not filled at all
+    if (remainingOrder) {
+      const activeOrder: ActiveOrder = {
+        ...remainingOrder,
+        status: newTrades.length > 0 ? 'partial' : 'open',
+        filled: newTrades.reduce((acc, trade) => acc + trade.quantity, 0)
+      };
+      setActiveOrders(prev => [...prev, activeOrder]);
+    } 
+    
+    // Add to history if fully filled
+    if (newTrades.length > 0 && !remainingOrder) {
+      const historicalOrder: HistoricalOrder = {
+        id: tradingService.generateOrderId(),
+        price: parseFloat(price),
+        size: parseFloat(size),
+        total: parseFloat(price) * parseFloat(size),
+        type: tradeType,
+        timestamp: Date.now(),
+        status: 'filled',
+        filled: parseFloat(size),
+        completedAt: Date.now()
+      };
+      setOrderHistory(prev => [historicalOrder, ...prev]);
+    }
+
+    // Reset form
+    setPrice('');
+    setSize('');
+  }, [price, size, tradeType, orderBook, tradingService]);
+
+  // Update the cancel order function
+  const handleCancelOrder = useCallback((orderId: string) => {
+    setActiveOrders(prev => {
+      const orderToCancel = prev.find(order => order.id === orderId);
+      if (!orderToCancel) return prev;
+
+      // Add to history as cancelled
+      const historicalOrder: HistoricalOrder = {
+        ...orderToCancel,
+        status: 'cancelled',
+        filled: orderToCancel.filled || 0, // Provide default value for filled
+        completedAt: Date.now()
+      };
+      setOrderHistory(prev => [historicalOrder, ...prev]);
+
+      // Remove from active orders
+      return prev.filter(order => order.id !== orderId);
+    });
+  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-fuel-dark-900 text-gray-100">
       {/* Header - Always visible */}
-      <header className="border-b border-fuel-dark-600 bg-fuel-dark-800 py-2.5">
-        <div className="flex items-center justify-between px-4">
-          <div className="flex items-center space-x-8">
-            <div className="flex items-center space-x-2 justify-center">
+      <header className="border-b border-fuel-dark-600 bg-fuel-dark-800 py-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 space-y-2 sm:space-y-0">
+          <div className="flex items-center justify-between sm:space-x-8">
+            <div className="flex items-center space-x-2">
               <img
                 src={FuelLogo}
                 alt="FUEL Logo"
-                className="w-4 md:w-7 h-7 mt-2"
+                className="w-5 sm:w-7 h-7"
               />
-              <span className="text-lg font-bold">FUEL DEX</span>
+              <span className="text-base sm:text-lg font-bold">FUEL DEX</span>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <button 
-                className={`px-4 py-1.5 rounded text-sm transition-colors
+                className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors
                   ${activeScreen === 'terminal' 
                     ? 'bg-fuel-dark-700 text-fuel-green' 
                     : 'text-gray-400 hover:text-gray-300'}`}
@@ -112,7 +212,7 @@ function App() {
                 Terminal
               </button>
               <button 
-                className={`px-4 py-1.5 rounded text-sm transition-colors
+                className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors
                   ${activeScreen === 'swap' 
                     ? 'bg-fuel-dark-700 text-fuel-green' 
                     : 'text-gray-400 hover:text-gray-300'}`}
@@ -122,9 +222,9 @@ function App() {
               </button>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center justify-end space-x-2 sm:space-x-4">
             <button 
-              className="px-4 py-1.5 rounded bg-fuel-dark-700 text-gray-100 text-sm hover:bg-fuel-dark-600"
+              className="px-3 sm:px-4 py-1.5 rounded bg-fuel-dark-700 text-gray-100 text-xs sm:text-sm hover:bg-fuel-dark-600"
               onClick={() => setIsDepositModalOpen(true)}
             >
               Deposit
@@ -136,29 +236,66 @@ function App() {
 
       {/* Trading Pair Info - Only visible in terminal */}
       {activeScreen === 'terminal' && (
-        <div className="border-b border-fuel-dark-600 bg-fuel-dark-800 py-2.5">
-          <div className="flex items-center justify-between px-4">
-            <div className="flex items-center space-x-8">
+        <div className="bg-fuel-dark-800 px-4 py-2 border-b border-fuel-dark-600">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center justify-between sm:justify-start">
               <div className="flex items-center space-x-2">
-                <span className="text-xl font-bold">FUEL-USDT</span>
-                <ChevronDown className="h-4 w-4 text-gray-400" />
+                <span className="text-lg font-bold">FUEL-USDT</span>
+                <ChevronDown className="w-4 h-4 text-gray-400" />
               </div>
-              <div className="flex items-center space-x-6 text-sm">
-                <div className="text-fuel-green font-medium">$0.041</div>
-                <div className="text-gray-400">
-                  24h volume
-                  <span className="ml-2 text-gray-100">$1.64273</span>
-                </div>
-                <div className="text-gray-400">
-                  24h High
-                  <span className="ml-2 text-gray-100">$0.0452</span>
-                </div>
-                <div className="text-gray-400">
-                  24h Low
-                  <span className="ml-2 text-gray-100">$0.041</span>
-                </div>
+              <div className="text-fuel-green font-medium sm:ml-4">$0.041</div>
+            </div>
+            
+            {/* Stats - Grid on mobile, flex on desktop */}
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:space-x-6 text-xs sm:text-sm">
+              <div className="text-gray-400">
+                24h volume
+                <span className="ml-2 text-gray-100">$1.64273</span>
+              </div>
+              <div className="text-gray-400">
+                24h High
+                <span className="ml-2 text-gray-100">$0.0452</span>
+              </div>
+              <div className="text-gray-400">
+                24h Low
+                <span className="ml-2 text-gray-100">$0.041</span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Navigation Tabs */}
+      {activeScreen === 'terminal' && (
+        <div className="sm:hidden bg-fuel-dark-800 border-b border-fuel-dark-600">
+          <div className="flex">
+            <button 
+              className={`flex-1 py-3 text-center text-sm border-b-2 transition-colors
+                ${mobileView === 'chart' 
+                  ? 'border-fuel-green text-fuel-green' 
+                  : 'border-transparent text-gray-400'}`}
+              onClick={() => setMobileView('chart')}
+            >
+              Chart
+            </button>
+            <button 
+              className={`flex-1 py-3 text-center text-sm border-b-2 transition-colors
+                ${mobileView === 'orderbook' 
+                  ? 'border-fuel-green text-fuel-green' 
+                  : 'border-transparent text-gray-400'}`}
+              onClick={() => setMobileView('orderbook')}
+            >
+              Order Book
+            </button>
+            <button 
+              className={`flex-1 py-3 text-center text-sm border-b-2 transition-colors
+                ${mobileView === 'trades' 
+                  ? 'border-fuel-green text-fuel-green' 
+                  : 'border-transparent text-gray-400'}`}
+              onClick={() => setMobileView('trades')}
+            >
+              Trades
+            </button>
           </div>
         </div>
       )}
@@ -167,75 +304,31 @@ function App() {
       <main className="flex-1 flex flex-col min-h-0">
         {activeScreen === 'terminal' ? (
           <>
-            <div className="flex-1 flex min-h-0">
-              {/* Chart Section - increased width */}
-              <div className="w-[75%] bg-fuel-dark-800 border-r border-fuel-dark-600 flex flex-col">
-                <div className="flex-1 min-h-0">
-                  {/* <AdvancedChart
-                    widgetProps={{
-                      interval: "1D",
-                      theme: "dark",
-                      width: "100%",
-                      height: "100%",
-                      symbol: "MEXC:FUELUSDT",
-                      timezone: "exchange",
-                      style: "1",
-                      locale: "en",
-                      toolbar_bg: "#0F1114",
-                      backgroundColor: "#0F1114",
-                      enable_publishing: false,
-                      hide_top_toolbar: true,
-                      save_image: false,
-                      container_id: "tradingview_chart",
-                    }}
-                  /> */}
-                  <TradingViewWidget/>
-                </div>
-              </div>
-
-              {/* Order Book and Trading Interface - decreased width */}
-              <div className="w-[25%] flex flex-col min-h-0">
-                {/* Order Type Selector */}
-                <div className="bg-fuel-dark-800 p-2 border-b border-fuel-dark-600">
-                  <div className="flex">
-                    <button 
-                      className={`flex-1 py-2 text-center text-sm rounded-l transition-colors
-                        ${activeView === 'orderbook' 
-                          ? 'bg-fuel-dark-700 text-fuel-green' 
-                          : 'bg-fuel-dark-800 text-gray-400 hover:text-gray-300'}`}
-                      onClick={() => setActiveView('orderbook')}
-                    >
-                      ORDERBOOK
-                    </button>
-                    <button 
-                      className={`flex-1 py-2 text-center text-sm rounded-r transition-colors
-                        ${activeView === 'trades' 
-                          ? 'bg-fuel-dark-700 text-fuel-green' 
-                          : 'bg-fuel-dark-800 text-gray-400 hover:text-gray-300'}`}
-                      onClick={() => setActiveView('trades')}
-                    >
-                      TRADES
-                    </button>
+            {/* Mobile View Content */}
+            <div className="sm:hidden flex flex-col h-full">
+              {/* Main Content Area */}
+              <div className="flex-1 overflow-hidden">
+                {mobileView === 'chart' && (
+                  <div className="h-[300px]">
+                    <TradingViewWidget />
                   </div>
-                </div>
+                )}
+                
+                {mobileView === 'orderbook' && (
+                  <div className="h-[300px] overflow-auto">
+                    <div className="p-2">
+                      <div className="text-[10px] grid grid-cols-3 text-gray-400 mb-2">
+                        <span>Price USDC</span>
+                        <span className="text-right">Amount FUEL</span>
+                        <span className="text-right">Total</span>
+                      </div>
 
-                {/* Content Section */}
-                {activeView === 'orderbook' ? (
-                  // Existing Orderbook content
-                  <div className="flex-1 bg-fuel-dark-800 p-2 flex flex-col min-h-0">
-                    <div className="text-xs grid grid-cols-3 text-gray-400 mb-2">
-                      <span>Price USDC</span>
-                      <span className="text-right">Amount FUEL</span>
-                      <span className="text-right">Total</span>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
                       {/* Asks */}
                       <div className="space-y-0.5 mb-2">
-                        {mockOrderBook.asks.map((order, i) => (
+                        {orderBook.asks.map((order, i) => (
                           <div
                             key={i}
-                            className="grid grid-cols-3 text-xs relative overflow-hidden"
+                            className="grid grid-cols-3 text-[10px] sm:text-xs relative overflow-hidden"
                           >
                             <div
                               className="absolute inset-0 bg-red-500/10"
@@ -255,21 +348,21 @@ function App() {
                       </div>
 
                       {/* Current Price */}
-                      <div className="text-center py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700">
-                        <div className="text-fuel-green text-sm font-medium">
-                          {calculateSpread(mockOrderBook.asks, mockOrderBook.bids).avgPrice} USDC
+                      <div className="sticky top-0 text-center py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700">
+                        <div className="text-fuel-green text-xs sm:text-sm font-medium">
+                          {calculateSpread(orderBook.asks, orderBook.bids).avgPrice} USDC
                         </div>
-                        <div className="text-xs text-gray-400">
-                          Spread: {calculateSpread(mockOrderBook.asks, mockOrderBook.bids).spread} ({calculateSpread(mockOrderBook.asks, mockOrderBook.bids).spreadPercentage}%)
+                        <div className="text-[10px] sm:text-xs text-gray-400">
+                          Spread: {calculateSpread(orderBook.asks, orderBook.bids).spread} ({calculateSpread(orderBook.asks, orderBook.bids).spreadPercentage}%)
                         </div>
                       </div>
 
                       {/* Bids */}
                       <div className="space-y-0.5 mt-2">
-                        {mockOrderBook.bids.map((order, i) => (
+                        {orderBook.bids.map((order, i) => (
                           <div
                             key={i}
-                            className="grid grid-cols-3 text-xs relative overflow-hidden"
+                            className="grid grid-cols-3 text-[10px] sm:text-xs relative overflow-hidden"
                           >
                             <div
                               className="absolute inset-0 bg-green-900/20"
@@ -289,24 +382,24 @@ function App() {
                       </div>
                     </div>
                   </div>
-                ) : (
-                  // New Trades content
-                  <div className="flex-1 bg-fuel-dark-800 p-2 flex flex-col min-h-0">
-                    <div className="text-xs grid grid-cols-3 text-gray-400 mb-2">
-                      <span>Price</span>
-                      <span className="text-right">Qty</span>
-                      <span className="text-right">Time</span>
-                    </div>
+                )}
 
-                    <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {mobileView === 'trades' && (
+                  <div className="h-[300px] overflow-auto">
+                    <div className="p-2">
+                      <div className="text-[10px] grid grid-cols-3 text-gray-400 mb-2">
+                        <span>Price</span>
+                        <span className="text-right">Qty</span>
+                        <span className="text-right">Time</span>
+                      </div>
                       <div className="space-y-0.5">
-                        {mockTrades.map((trade, i) => (
+                        {trades.map((trade, i) => (
                           <div
                             key={i}
-                            className="grid grid-cols-3 text-xs"
+                            className="grid grid-cols-3 text-[10px] sm:text-xs"
                           >
                             <span className={`font-mono ${
-                              trade.price >= (mockTrades[i + 1]?.price ?? trade.price) 
+                              trade.price >= (trades[i + 1]?.price ?? trade.price) 
                                 ? 'text-green-400' 
                                 : 'text-red-400'
                             }`}>
@@ -324,44 +417,167 @@ function App() {
                     </div>
                   </div>
                 )}
+              </div>
 
-                {/* Trading Interface */}
-                <div className="bg-fuel-dark-800 p-2 border-t border-fuel-dark-600">
-                  <div className="flex mb-4">
+              {/* Orders/History Section */}
+              <div className="h-[200px] bg-fuel-dark-800 border-t border-fuel-dark-600">
+                <div className="flex border-b border-fuel-dark-600">
+                  <button 
+                    className={`flex-1 py-2 text-center text-sm font-medium transition-colors
+                      ${mobileBottomView === 'orders' 
+                        ? 'text-fuel-green' 
+                        : 'text-gray-400'}`}
+                    onClick={() => setMobileBottomView('orders')}
+                  >
+                    Orders
+                  </button>
+                  <button 
+                    className={`flex-1 py-2 text-center text-sm font-medium transition-colors
+                      ${mobileBottomView === 'history' 
+                        ? 'text-fuel-green' 
+                        : 'text-gray-400'}`}
+                    onClick={() => setMobileBottomView('history')}
+                  >
+                    History
+                  </button>
+                </div>
+
+                <div className="overflow-auto h-[calc(200px-40px)]">
+                  {mobileBottomView === 'orders' ? (
+                    activeOrders.length > 0 ? (
+                      <div>
+                        {/* Table Headers */}
+                        <div className="grid grid-cols-5 text-[10px] text-gray-400 p-2 border-b border-fuel-dark-600">
+                          <div>Date</div>
+                          <div>Pair</div>
+                          <div>Type</div>
+                          <div>Amount</div>
+                          <div>Price</div>
+                        </div>
+                        {/* Table Content */}
+                        <div className="divide-y divide-fuel-dark-600">
+                          {activeOrders.map(order => (
+                            <div key={order.id} className="grid grid-cols-5 p-2 text-xs hover:bg-fuel-dark-700 group">
+                              <div className="text-gray-400">
+                                {new Date(order.timestamp).toLocaleTimeString()}
+                              </div>
+                              <div>FUEL/USDT</div>
+                              <div className={`${
+                                order.type === 'buy' ? 'text-green-400' : 'text-red-400'
+                              }`}>
+                                {order.type.toUpperCase()}
+                                {order.status === 'partial' && ' (PARTIAL)'}
+                              </div>
+                              <div>
+                                {order.size.toFixed(4)}
+                                {order.status === 'partial' && 
+                                  <span className="text-gray-400"> ({order.filled!.toFixed(4)} filled)</span>
+                                }
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span>{order.price.toFixed(5)}</span>
+                                <button
+                                  className="px-2 py-0.5 text-[10px] text-gray-400 hover:text-gray-300 hover:bg-fuel-dark-600 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => handleCancelOrder(order.id)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                        <p className="text-sm">No active orders</p>
+                      </div>
+                    )
+                  ) : (
+                    orderHistory.length > 0 ? (
+                      <div>
+                        {/* Table Headers */}
+                        <div className="grid grid-cols-5 text-[10px] text-gray-400 p-2 border-b border-fuel-dark-600">
+                          <div>Date</div>
+                          <div>Pair</div>
+                          <div>Type</div>
+                          <div>Amount</div>
+                          <div>Price</div>
+                        </div>
+                        {/* Table Content */}
+                        <div className="divide-y divide-fuel-dark-600">
+                          {orderHistory.map(order => (
+                            <div key={order.id} className="grid grid-cols-5 p-2 text-xs hover:bg-fuel-dark-700">
+                              <div className="text-gray-400">
+                                {new Date(order.completedAt).toLocaleTimeString()}
+                              </div>
+                              <div>FUEL/USDT</div>
+                              <div className={`flex items-center space-x-2 ${
+                                order.type === 'buy' ? 'text-green-400' : 'text-red-400'
+                              }`}>
+                                <span>{order.type.toUpperCase()}</span>
+                                <span className={`text-[6px] md:text-[10px] px-1 md:px-1.5 rounded ${
+                                  order.status === 'filled' 
+                                    ? 'bg-green-400/10 text-green-400' 
+                                    : 'bg-gray-400/10 text-gray-400'
+                                }`}>
+                                  {order.status.toUpperCase()}
+                                </span>
+                              </div>
+                              <div>{order.filled.toFixed(4)}</div>
+                              <div>{order.price.toFixed(5)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                        <p className="text-sm">No order history</p>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+
+              {/* Trading Interface - Mobile */}
+              <div className="border-t border-fuel-dark-600">
+                <div className="p-2">
+                  {/* Buy/Sell Buttons - More compact */}
+                  <div className="flex mb-2">
                     <button 
-                      className={`flex-1 py-2 text-sm font-medium rounded-l transition-colors
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-l transition-colors
                         ${tradeType === 'buy' 
                           ? 'bg-fuel-green text-fuel-dark-900' 
-                          : 'bg-fuel-dark-700 text-gray-400 hover:bg-fuel-dark-600'}`}
+                          : 'bg-fuel-dark-700 text-gray-400'}`}
                       onClick={() => setTradeType('buy')}
                     >
                       BUY
                     </button>
                     <button 
-                      className={`flex-1 py-2 text-sm font-medium rounded-r transition-colors
+                      className={`flex-1 py-1.5 text-xs font-medium rounded-r transition-colors
                         ${tradeType === 'sell' 
                           ? 'bg-red-500 text-white' 
-                          : 'bg-fuel-dark-700 text-gray-400 hover:bg-fuel-dark-600'}`}
+                          : 'bg-fuel-dark-700 text-gray-400'}`}
                       onClick={() => setTradeType('sell')}
                     >
                       SELL
                     </button>
                   </div>
 
-                  <div className="space-y-3">
+                  {/* Order Form - More compact */}
+                  <div className="space-y-2">
                     <div>
-                      <div className="flex justify-between text-xs mb-1">
+                      <div className="flex justify-between text-[10px] mb-0.5">
                         <span className="text-gray-400">Order type</span>
                         <span className="text-gray-400">Price</span>
                       </div>
                       <div className="flex space-x-2">
                         <div className="flex-1 relative">
                           <button
-                            className="w-full bg-fuel-dark-700 rounded p-2 text-sm text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
+                            className="w-full bg-fuel-dark-700 rounded p-1.5 text-xs text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
                             onClick={() => setIsOrderTypeOpen(!isOrderTypeOpen)}
                           >
                             <span>{orderType.toUpperCase()}</span>
-                            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOrderTypeOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`h-3 w-3 text-gray-400 transition-transform ${isOrderTypeOpen ? 'rotate-180' : ''}`} />
                           </button>
                           {isOrderTypeOpen && (
                             <div className="absolute top-full left-0 w-full mt-1 bg-fuel-dark-700 rounded shadow-lg border border-fuel-dark-600 z-10">
@@ -388,7 +604,7 @@ function App() {
                         </div>
                         <input
                           type="number"
-                          className="flex-1 bg-fuel-dark-700 rounded p-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex-1 bg-fuel-dark-700 rounded p-1.5 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="0.00"
                           value={price}
                           onChange={(e) => setPrice(e.target.value)}
@@ -398,25 +614,25 @@ function App() {
                     </div>
 
                     <div>
-                      <div className="flex justify-between text-xs mb-1">
+                      <div className="flex justify-between text-[10px] mb-0.5">
                         <span className="text-gray-400">Order size</span>
                         <span className="text-gray-400">MAX</span>
                       </div>
                       <div className="flex space-x-2">
                         <input
                           type="number"
-                          className="flex-1 bg-fuel-dark-700 rounded p-2 text-sm hover:bg-fuel-dark-600 transition-colors"
+                          className="flex-1 bg-fuel-dark-700 rounded p-1.5 text-xs hover:bg-fuel-dark-600 transition-colors"
                           placeholder="0.00"
                           value={size}
                           onChange={(e) => setSize(e.target.value)}
                         />
                         <div className="relative">
                           <button
-                            className="w-24 bg-fuel-dark-700 rounded p-2 text-sm text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
+                            className="w-20 bg-fuel-dark-700 rounded p-1.5 text-xs text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
                             onClick={() => setIsTokenSelectOpen(!isTokenSelectOpen)}
                           >
                             <span>FUEL</span>
-                            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isTokenSelectOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`h-3 w-3 text-gray-400 transition-transform ${isTokenSelectOpen ? 'rotate-180' : ''}`} />
                           </button>
                           {isTokenSelectOpen && (
                             <div className="absolute top-full right-0 w-24 mt-1 bg-fuel-dark-700 rounded shadow-lg border border-fuel-dark-600 z-10">
@@ -442,29 +658,408 @@ function App() {
                       </div>
                     </div>
 
-                    <WalletConnect variant="trade" tradeType={tradeType} />
+                    {/* Connect Wallet Button - More compact */}
+                    <div className="mt-2">
+                      <WalletConnect variant="trade" tradeType={tradeType} />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-            {/* Trade History */}
-            <div className="bg-fuel-dark-800 border-t border-fuel-dark-600">
-              <div className="px-4 py-3">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex space-x-6">
-                    <button className="text-fuel-green text-sm font-medium hover:text-opacity-90">
-                      ORDERS
-                    </button>
-                    <button className="text-gray-400 text-sm font-medium hover:text-gray-300">
-                      HISTORY
-                    </button>
+
+            {/* Desktop View - Hide on mobile */}
+            <div className="hidden sm:flex flex-1 min-h-0">
+              <div className="flex flex-1">
+                {/* Left side - Chart and Orders/History */}
+                <div className="flex-[3] flex flex-col min-h-0">
+                  {/* Chart */}
+                  <div className="flex-1 min-h-[400px] bg-fuel-dark-800 border-r border-fuel-dark-600">
+                    <TradingViewWidget />
+                  </div>
+
+                  {/* Desktop Orders and History Section */}
+                  <div className="h-[200px] bg-fuel-dark-800 border-t border-fuel-dark-600">
+                    <div className="flex border-b border-fuel-dark-600">
+                      <button 
+                        className={`flex-1 py-2 text-center text-sm font-medium transition-colors
+                          ${mobileBottomView === 'orders' 
+                            ? 'text-fuel-green' 
+                            : 'text-gray-400'}`}
+                        onClick={() => setMobileBottomView('orders')}
+                      >
+                        Orders
+                      </button>
+                      <button 
+                        className={`flex-1 py-2 text-center text-sm font-medium transition-colors
+                          ${mobileBottomView === 'history' 
+                            ? 'text-fuel-green' 
+                            : 'text-gray-400'}`}
+                        onClick={() => setMobileBottomView('history')}
+                      >
+                        History
+                      </button>
+                    </div>
+
+                    <div className="overflow-auto h-[calc(200px-40px)]">
+                      {mobileBottomView === 'orders' ? (
+                        activeOrders.length > 0 ? (
+                          <div>
+                            {/* Table Headers */}
+                            <div className="grid grid-cols-5 text-[10px] text-gray-400 p-2 border-b border-fuel-dark-600">
+                              <div>Date</div>
+                              <div>Pair</div>
+                              <div>Type</div>
+                              <div>Amount</div>
+                              <div>Price</div>
+                            </div>
+                            {/* Table Content */}
+                            <div className="divide-y divide-fuel-dark-600">
+                              {activeOrders.map(order => (
+                                <div key={order.id} className="grid grid-cols-5 p-2 text-xs hover:bg-fuel-dark-700 group">
+                                  <div className="text-gray-400">
+                                    {new Date(order.timestamp).toLocaleTimeString()}
+                                  </div>
+                                  <div>FUEL/USDT</div>
+                                  <div className={`${
+                                    order.type === 'buy' ? 'text-green-400' : 'text-red-400'
+                                  }`}>
+                                    {order.type.toUpperCase()}
+                                    {order.status === 'partial' && ' (PARTIAL)'}
+                                  </div>
+                                  <div>
+                                    {order.size.toFixed(4)}
+                                    {order.status === 'partial' && 
+                                      <span className="text-gray-400"> ({order.filled!.toFixed(4)} filled)</span>
+                                    }
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <span>{order.price.toFixed(5)}</span>
+                                    <button
+                                      className="px-2 py-0.5 text-[10px] text-gray-400 hover:text-gray-300 hover:bg-fuel-dark-600 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onClick={() => handleCancelOrder(order.id)}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                            <p className="text-sm">No active orders</p>
+                          </div>
+                        )
+                      ) : (
+                        orderHistory.length > 0 ? (
+                          <div>
+                            {/* Table Headers */}
+                            <div className="grid grid-cols-5 text-[10px] text-gray-400 p-2 border-b border-fuel-dark-600">
+                              <div>Date</div>
+                              <div>Pair</div>
+                              <div>Type</div>
+                              <div>Amount</div>
+                              <div>Price</div>
+                            </div>
+                            {/* Table Content */}
+                            <div className="divide-y divide-fuel-dark-600">
+                              {orderHistory.map(order => (
+                                <div key={order.id} className="grid grid-cols-5 p-2 text-xs hover:bg-fuel-dark-700">
+                                  <div className="text-gray-400">
+                                    {new Date(order.completedAt).toLocaleTimeString()}
+                                  </div>
+                                  <div>FUEL/USDT</div>
+                                  <div className={`flex items-center space-x-2 ${
+                                    order.type === 'buy' ? 'text-green-400' : 'text-red-400'
+                                  }`}>
+                                    <span>{order.type.toUpperCase()}</span>
+                                    <span className={`text-[10px] px-1.5 rounded ${
+                                      order.status === 'filled' 
+                                        ? 'bg-green-400/10 text-green-400' 
+                                        : 'bg-gray-400/10 text-gray-400'
+                                    }`}>
+                                      {order.status.toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <div>{order.filled.toFixed(4)}</div>
+                                  <div>{order.price.toFixed(5)}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                            <p className="text-sm">No order history</p>
+                          </div>
+                        )
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-col items-center justify-center py-8 text-gray-400">
-                  <p className="text-sm mb-1">You haven't made any trades so far</p>
-                  <p className="text-xs">
-                    Begin trading to view updates on your portfolio
-                  </p>
+
+                {/* Right side - Order Book and Trading Interface */}
+                <div className="w-[350px] flex flex-col min-h-0 bg-fuel-dark-800 border-l border-fuel-dark-600">
+                  {/* Order Book/Trades Toggle */}
+                  <div className="flex border-b border-fuel-dark-600">
+                    <button 
+                      className={`flex-1 py-3 text-center text-sm font-medium transition-colors
+                        ${activeView === 'orderbook' 
+                          ? 'text-fuel-green' 
+                          : 'text-gray-400'}`}
+                      onClick={() => setActiveView('orderbook')}
+                    >
+                      Order Book
+                    </button>
+                    <button 
+                      className={`flex-1 py-3 text-center text-sm font-medium transition-colors
+                        ${activeView === 'trades' 
+                          ? 'text-fuel-green' 
+                          : 'text-gray-400'}`}
+                      onClick={() => setActiveView('trades')}
+                    >
+                      Trades
+                    </button>
+                  </div>
+
+                  {/* Order Book/Trades Content */}
+                  <div className="flex-1 overflow-auto">
+                    {activeView === 'orderbook' ? (
+                      // Orderbook content
+                      <div className="p-2">
+                        <div className="text-[10px] sm:text-xs grid grid-cols-3 text-gray-400 mb-2">
+                          <span>Price USDC</span>
+                          <span className="text-right">Amount FUEL</span>
+                          <span className="text-right">Total</span>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto h-[200px] sm:h-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
+                          {/* Asks */}
+                          <div className="space-y-0.5 mb-2">
+                            {orderBook.asks.map((order, i) => (
+                              <div
+                                key={i}
+                                className="grid grid-cols-3 text-[10px] sm:text-xs relative overflow-hidden"
+                              >
+                                <div
+                                  className="absolute inset-0 bg-red-500/10"
+                                  style={{ width: `${(order.total / 16.4) * 100}%` }}
+                                ></div>
+                                <span className="relative z-10 text-red-400">
+                                  {order.price.toFixed(5)}
+                                </span>
+                                <span className="relative z-10 text-right">
+                                  {order.size.toFixed(3)}
+                                </span>
+                                <span className="relative z-10 text-right text-gray-500">
+                                  {order.total.toFixed(5)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Current Price */}
+                          <div className="text-center py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700">
+                            <div className="text-fuel-green text-xs sm:text-sm font-medium">
+                              {calculateSpread(orderBook.asks, orderBook.bids).avgPrice} USDC
+                            </div>
+                            <div className="text-[10px] sm:text-xs text-gray-400">
+                              Spread: {calculateSpread(orderBook.asks, orderBook.bids).spread} ({calculateSpread(orderBook.asks, orderBook.bids).spreadPercentage}%)
+                            </div>
+                          </div>
+
+                          {/* Bids */}
+                          <div className="space-y-0.5 mt-2">
+                            {orderBook.bids.map((order, i) => (
+                              <div
+                                key={i}
+                                className="grid grid-cols-3 text-[10px] sm:text-xs relative overflow-hidden"
+                              >
+                                <div
+                                  className="absolute inset-0 bg-green-900/20"
+                                  style={{ width: `${(order.total / 948.1) * 100}%` }}
+                                ></div>
+                                <span className="relative z-10 text-green-400">
+                                  {order.price.toFixed(5)}
+                                </span>
+                                <span className="relative z-10 text-right">
+                                  {order.size.toFixed(3)}
+                                </span>
+                                <span className="relative z-10 text-right text-gray-500">
+                                  {order.total.toFixed(5)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      // Trades content
+                      <div className="p-2">
+                        <div className="text-[10px] sm:text-xs grid grid-cols-3 text-gray-400 mb-2">
+                          <span>Price</span>
+                          <span className="text-right">Qty</span>
+                          <span className="text-right">Time</span>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto h-[200px] sm:h-auto custom-scrollbar">
+                          <div className="space-y-0.5">
+                            {trades.map((trade, i) => (
+                              <div
+                                key={i}
+                                className="grid grid-cols-3 text-[10px] sm:text-xs"
+                              >
+                                <span className={`font-mono ${
+                                  trade.price >= (trades[i + 1]?.price ?? trade.price) 
+                                    ? 'text-green-400' 
+                                    : 'text-red-400'
+                                }`}>
+                                  {trade.price.toFixed(5)}
+                                </span>
+                                <span className="text-right font-mono">
+                                  {trade.quantity.toFixed(4)}
+                                </span>
+                                <span className="text-right text-gray-500 font-mono">
+                                  {trade.time}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Trading Interface */}
+                  <div className="p-3 border-t border-fuel-dark-600">
+                    <div className="flex mb-4">
+                      <button 
+                        className={`flex-1 py-2 text-sm font-medium rounded-l transition-colors
+                          ${tradeType === 'buy' 
+                            ? 'bg-fuel-green text-fuel-dark-900' 
+                            : 'bg-fuel-dark-700 text-gray-400 hover:bg-fuel-dark-600'}`}
+                        onClick={() => setTradeType('buy')}
+                      >
+                        BUY
+                      </button>
+                      <button 
+                        className={`flex-1 py-2 text-sm font-medium rounded-r transition-colors
+                          ${tradeType === 'sell' 
+                            ? 'bg-red-500 text-white' 
+                            : 'bg-fuel-dark-700 text-gray-400 hover:bg-fuel-dark-600'}`}
+                        onClick={() => setTradeType('sell')}
+                      >
+                        SELL
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-gray-400">Order type</span>
+                          <span className="text-gray-400">Price</span>
+                        </div>
+                        <div className="flex space-x-2">
+                          <div className="flex-1 relative">
+                            <button
+                              className="w-full bg-fuel-dark-700 rounded p-2 text-sm text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
+                              onClick={() => setIsOrderTypeOpen(!isOrderTypeOpen)}
+                            >
+                              <span>{orderType.toUpperCase()}</span>
+                              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOrderTypeOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {isOrderTypeOpen && (
+                              <div className="absolute top-full left-0 w-full mt-1 bg-fuel-dark-700 rounded shadow-lg border border-fuel-dark-600 z-10">
+                                <button
+                                  className="w-full p-2 text-sm text-left hover:bg-fuel-dark-600 transition-colors"
+                                  onClick={() => {
+                                    setOrderType('limit');
+                                    setIsOrderTypeOpen(false);
+                                  }}
+                                >
+                                  LIMIT
+                                </button>
+                                <button
+                                  className="w-full p-2 text-sm text-left hover:bg-fuel-dark-600 transition-colors"
+                                  onClick={() => {
+                                    setOrderType('market');
+                                    setIsOrderTypeOpen(false);
+                                  }}
+                                >
+                                  MARKET
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          <input
+                            type="number"
+                            className="flex-1 bg-fuel-dark-700 rounded p-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            placeholder="0.00"
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                            disabled={orderType === "market"}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-gray-400">Order size</span>
+                          <span className="text-gray-400">MAX</span>
+                        </div>
+                        <div className="flex space-x-2">
+                          <input
+                            type="number"
+                            className="flex-1 bg-fuel-dark-700 rounded p-2 text-sm hover:bg-fuel-dark-600 transition-colors"
+                            placeholder="0.00"
+                            value={size}
+                            onChange={(e) => setSize(e.target.value)}
+                          />
+                          <div className="relative">
+                            <button
+                              className="w-24 bg-fuel-dark-700 rounded p-2 text-sm text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
+                              onClick={() => setIsTokenSelectOpen(!isTokenSelectOpen)}
+                            >
+                              <span>FUEL</span>
+                              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isTokenSelectOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {isTokenSelectOpen && (
+                              <div className="absolute top-full right-0 w-24 mt-1 bg-fuel-dark-700 rounded shadow-lg border border-fuel-dark-600 z-10">
+                                <button
+                                  className="w-full p-2 text-sm text-left hover:bg-fuel-dark-600 transition-colors"
+                                  onClick={() => {
+                                    setIsTokenSelectOpen(false);
+                                  }}
+                                >
+                                  FUEL
+                                </button>
+                                <button
+                                  className="w-full p-2 text-sm text-left hover:bg-fuel-dark-600 transition-colors"
+                                  onClick={() => {
+                                    setIsTokenSelectOpen(false);
+                                  }}
+                                >
+                                  USDC
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* <WalletConnect variant="trade" tradeType={tradeType} /> */}
+                    </div>
+
+                    <div className="mt-4">
+                      <button
+                        className="w-full py-2 text-sm font-medium rounded transition-colors
+                          bg-fuel-green text-fuel-dark-900 hover:bg-opacity-90"
+                        onClick={handlePlaceOrder}
+                        disabled={!price || !size}
+                      >
+                        Place {tradeType.toUpperCase()} Order
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
