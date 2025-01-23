@@ -9,6 +9,9 @@ import DepositModal from './components/DepositModal';
 import { TradingService } from './services/tradingService';
 import { Order, Trade, OrderBook, ActiveOrder, HistoricalOrder } from './types/trading';
 import P2PComponent from './components/P2PComponent';
+import ETHIcon from './assets/eth.svg';
+import USDCIcon from './assets/usdc.svg';
+import USDTIcon from './assets/usdt.svg';
 
 // Mock data for the order book
 const mockOrderBook = {
@@ -79,6 +82,25 @@ const calculateSpread = (asks: typeof mockOrderBook.asks, bids: typeof mockOrder
   };
 };
 
+// Add this type and constant before the App component
+type TradingPair = 'ETH/USDT' | 'ETH/USDC' | 'USDC/USDT';
+
+const TRADING_PAIRS: TradingPair[] = ['ETH/USDT', 'ETH/USDC', 'USDC/USDT'];
+
+// Add this helper function
+const getTokenIcon = (token: string) => {
+  switch (token) {
+    case 'ETH':
+      return ETHIcon;
+    case 'USDC':
+      return USDCIcon;
+    case 'USDT':
+      return USDTIcon;
+    default:
+      return USDCIcon;
+  }
+};
+
 function App() {
   const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
   const [size, setSize] = useState<string>('');
@@ -91,6 +113,8 @@ function App() {
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [mobileView, setMobileView] = useState<'chart' | 'orderbook' | 'trades'>('chart');
   const [mobileBottomView, setMobileBottomView] = useState<'orders' | 'history'>('orders');
+  const [selectedPair, setSelectedPair] = useState<TradingPair>('ETH/USDT');
+  const [isPairSelectOpen, setIsPairSelectOpen] = useState(false);
 
   const [orderBook, setOrderBook] = useState<OrderBook>({
     asks: mockOrderBook.asks.map(ask => ({
@@ -251,9 +275,62 @@ function App() {
         <div className="bg-fuel-dark-800 px-4 py-2 border-b border-fuel-dark-600">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div className="flex items-center justify-between sm:justify-start">
-              <div className="flex items-center space-x-2">
-                <span className="text-lg font-bold">FUEL-USDT</span>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+              <div className="flex items-center justify-between sm:justify-start">
+                <div className="relative">
+                  <button
+                    className="flex items-center space-x-2 text-lg font-bold hover:bg-fuel-dark-700 rounded px-2 py-1"
+                    onClick={() => setIsPairSelectOpen(!isPairSelectOpen)}
+                  >
+                    <div className="flex items-center">
+                      <div className="flex -space-x-2 mr-2">
+                        <img 
+                          src={getTokenIcon(selectedPair.split('/')[0])} 
+                          className="w-6 h-6 rounded-full ring-2 ring-fuel-dark-900" 
+                          alt={selectedPair.split('/')[0]} 
+                        />
+                        <img 
+                          src={getTokenIcon(selectedPair.split('/')[1])} 
+                          className="w-6 h-6 rounded-full ring-2 ring-fuel-dark-900 relative z-10" 
+                          alt={selectedPair.split('/')[1]} 
+                        />
+                      </div>
+                      <span>{selectedPair}</span>
+                    </div>
+                    <ChevronDown className={`w-5 h-5 transition-transform ${isPairSelectOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  
+                  {isPairSelectOpen && (
+                    <div className="absolute top-full left-0 mt-1 w-48 bg-fuel-dark-800 rounded shadow-lg border border-fuel-dark-600 z-50">
+                      {TRADING_PAIRS.map((pair) => {
+                        const [base, quote] = pair.split('/');
+                        return (
+                          <button
+                            key={pair}
+                            className="w-full px-4 py-2 text-left hover:bg-fuel-dark-700 transition-colors flex items-center space-x-2"
+                            onClick={() => {
+                              setSelectedPair(pair);
+                              setIsPairSelectOpen(false);
+                            }}
+                          >
+                            <div className="flex -space-x-2">
+                              <img 
+                                src={getTokenIcon(base)} 
+                                className="w-5 h-5 rounded-full ring-2 ring-fuel-dark-800" 
+                                alt={base} 
+                              />
+                              <img 
+                                src={getTokenIcon(quote)} 
+                                className="w-5 h-5 rounded-full ring-2 ring-fuel-dark-800 relative z-10" 
+                                alt={quote} 
+                              />
+                            </div>
+                            <span>{pair}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="text-fuel-green font-medium sm:ml-4">$0.041</div>
             </div>
