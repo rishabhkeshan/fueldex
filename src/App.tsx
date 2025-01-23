@@ -8,6 +8,7 @@ import SwapComponent from './components/SwapComponent';
 import DepositModal from './components/DepositModal';
 import { TradingService } from './services/tradingService';
 import { Order, Trade, OrderBook, ActiveOrder, HistoricalOrder } from './types/trading';
+import P2PComponent from './components/P2PComponent';
 
 // Mock data for the order book
 const mockOrderBook = {
@@ -86,7 +87,7 @@ function App() {
   const [activeView, setActiveView] = useState<'orderbook' | 'trades'>('orderbook');
   const [isOrderTypeOpen, setIsOrderTypeOpen] = useState(false);
   const [isTokenSelectOpen, setIsTokenSelectOpen] = useState(false);
-  const [activeScreen, setActiveScreen] = useState<'terminal' | 'swap'>('terminal');
+  const [activeScreen, setActiveScreen] = useState<'terminal' | 'swap' | 'p2p'>('terminal');
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [mobileView, setMobileView] = useState<'chart' | 'orderbook' | 'trades'>('chart');
   const [mobileBottomView, setMobileBottomView] = useState<'orders' | 'history'>('orders');
@@ -219,6 +220,17 @@ function App() {
                 onClick={() => setActiveScreen("swap")}
               >
                 Swap
+              </button>
+              <button
+                className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors
+                  ${
+                    activeScreen === "p2p"
+                      ? "bg-fuel-dark-700 text-fuel-green"
+                      : "text-gray-400 hover:text-gray-300"
+                  }`}
+                onClick={() => setActiveScreen("p2p")}
+              >
+                P2P
               </button>
             </div>
           </div>
@@ -1196,7 +1208,7 @@ function App() {
                         onClick={handlePlaceOrder}
                         disabled={!price || !size}
                       >
-                        Place {tradeType.toUpperCase()} Order
+                        Place Order
                       </button>
                     </div>
                   </div>
@@ -1204,8 +1216,10 @@ function App() {
               </div>
             </div>
           </>
-        ) : (
+        ) : activeScreen === 'swap' ? (
           <SwapComponent />
+        ) : (
+          <P2PComponent />
         )}
       </main>
 

@@ -31,7 +31,7 @@ function WalletConnect({ variant = 'header', tradeType = 'buy', tokenSymbol = 'F
       >
         {isConnected 
           ? `${tradeType.toUpperCase()} ${tokenSymbol}` 
-          : `Connect wallet to ${tradeType.toUpperCase()}`}
+          : `Get Started`}
       </button>
     );
   }

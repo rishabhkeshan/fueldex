@@ -14,7 +14,7 @@ function TradingViewWidget() {
     script.innerHTML = `
         {
           "autosize": true,
-          "symbol": "MEXC:FUELUSDT",
+          "symbol": "MEXC:ETHUSDT",
           "interval": "5",
           "timezone": "Etc/UTC",
           "theme": "dark",

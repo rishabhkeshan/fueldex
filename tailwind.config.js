@@ -1,6 +1,12 @@
+import tailwindScrollbar from 'tailwind-scrollbar';
+
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -13,8 +19,10 @@ export default {
             600: '#222222'
           }
         }
-      }
+      },
     },
   },
-  plugins: [],
-};
+  plugins: [
+    tailwindScrollbar({ nocompatible: true }),
+  ],
+}

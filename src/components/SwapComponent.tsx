@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { ArrowDownUp, Info, Settings } from 'lucide-react';
 import WalletConnect from './WalletConnect';
+import USDTIcon from '../assets/usdt.svg';
+import USDCIcon from '../assets/usdc.svg';
+import ETHIcon from '../assets/eth.svg';
 
 // Add these interfaces at the top of the file
 interface TokenData {
   symbol: string;
-  icon: string;
+  icon: string | React.ReactNode;
   balance: string;
   usdValue: string;
   iconBg: string;
@@ -13,6 +16,31 @@ interface TokenData {
 
 // Add this type and state
 type SwapType = 'swap' | 'limit';
+
+// Add this after the interfaces
+const AVAILABLE_TOKENS: TokenData[] = [
+  {
+    symbol: 'ETH',
+    icon: <img src={ETHIcon} alt="ETH" className="w-6 h-6 sm:w-8 sm:h-8" />,
+    balance: '0.476402',
+    usdValue: '1,482.29',
+    iconBg: ''
+  },
+  {
+    symbol: 'USDC',
+    icon: <img src={USDCIcon} alt="USDC" className="w-6 h-6 sm:w-8 sm:h-8" />,
+    balance: '1,234.56',
+    usdValue: '1,234.56',
+    iconBg: ''
+  },
+  {
+    symbol: 'USDT',
+    icon: <img src={USDTIcon} alt="USDT" className="w-6 h-6 sm:w-8 sm:h-8" />,
+    balance: '2,345.67',
+    usdValue: '2,345.67',
+    iconBg: ''
+  }
+];
 
 function SwapComponent() {
   const [fromAmount, setFromAmount] = useState<string>('');
@@ -25,21 +53,9 @@ function SwapComponent() {
   const [customRecipient, setCustomRecipient] = useState(false);
 
   // Add token data state
-  const [fromToken, setFromToken] = useState<TokenData>({
-    symbol: 'ETH',
-    icon: 'Ξ',
-    balance: '0.476402',
-    usdValue: '1,482.29',
-    iconBg: 'bg-blue-500'
-  });
+  const [fromToken, setFromToken] = useState<TokenData>(AVAILABLE_TOKENS[0]); // ETH is index 0
 
-  const [toToken, setToToken] = useState<TokenData>({
-    symbol: 'FUEL',
-    icon: 'F',
-    balance: '65,536.6802',
-    usdValue: '1,463.37 (-1.28%)',
-    iconBg: 'bg-green-500'
-  });
+  const [toToken, setToToken] = useState<TokenData>(AVAILABLE_TOKENS[2]); // USDT is index 2
 
   // Add these state variables at the top
   const [slippageDisplay, setSlippageDisplay] = useState('2.00');
@@ -62,6 +78,59 @@ function SwapComponent() {
     setFromAmount(toAmount);
     setToAmount(fromAmount);
   };
+
+  // Add the token selection dropdown component
+  function TokenDropdown({ 
+    isOpen, 
+    onClose, 
+    onSelect, 
+    selectedToken,
+    excludeToken 
+  }: { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    onSelect: (token: TokenData) => void;
+    selectedToken: TokenData;
+    excludeToken?: string;  // Symbol of token to exclude
+  }) {
+    if (!isOpen) return null;
+
+    // Filter available tokens to exclude the selected token in the other dropdown
+    const availableTokens = AVAILABLE_TOKENS.filter(token => token.symbol !== excludeToken);
+
+    return (
+      <div className="absolute top-full left-0 mt-2 w-[240px] bg-fuel-dark-800 rounded-xl shadow-lg border border-fuel-dark-600 z-50">
+        <div className="p-3">
+          <div className="text-sm text-gray-400 mb-2">Select Token</div>
+          <div className="space-y-1">
+            {availableTokens.map((token) => (
+              <button
+                key={token.symbol}
+                className={`w-full flex items-center space-x-3 p-2.5 rounded-lg hover:bg-fuel-dark-700 transition-colors ${
+                  selectedToken.symbol === token.symbol ? 'bg-fuel-dark-700' : ''
+                }`}
+                onClick={() => {
+                  onSelect(token);
+                  onClose();
+                }}
+              >
+                <div className="flex items-center justify-center">
+                  {token.icon}
+                </div>
+                <div className="flex flex-col items-start flex-1">
+                  <span className="text-sm font-medium">{token.symbol}</span>
+                  <span className="text-xs text-gray-400">Balance: {token.balance}</span>
+                </div>
+                {selectedToken.symbol === token.symbol && (
+                  <div className="w-2 h-2 rounded-full bg-fuel-green"></div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col items-center pt-4 sm:pt-8">
@@ -255,20 +324,25 @@ function SwapComponent() {
                 </span>
               </div>
               <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 sm:p-3 rounded-lg">
-                <button
-                  className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
-                  onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
-                >
-                  <div
-                    className={`w-5 sm:w-6 h-5 sm:h-6 rounded-full ${fromToken.iconBg} flex items-center justify-center`}
+                <div className="relative">
+                  <button
+                    className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
+                    onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
                   >
-                    <span className="text-white text-xs">{fromToken.icon}</span>
-                  </div>
-                  <span className="text-sm sm:text-base">
-                    {fromToken.symbol}
-                  </span>
-                  <span className="text-gray-400">▼</span>
-                </button>
+                    <div className="flex items-center justify-center">
+                      {fromToken.icon}
+                    </div>
+                    <span className="text-sm sm:text-base">{fromToken.symbol}</span>
+                    <span className="text-gray-400">▼</span>
+                  </button>
+                  <TokenDropdown
+                    isOpen={isFromTokenOpen}
+                    onClose={() => setIsFromTokenOpen(false)}
+                    onSelect={setFromToken}
+                    selectedToken={fromToken}
+                    excludeToken={toToken.symbol}
+                  />
+                </div>
                 <input
                   type="text"
                   className="flex-1 bg-transparent text-xl sm:text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis"
@@ -301,18 +375,25 @@ function SwapComponent() {
                 </span>
               </div>
               <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 sm:p-3 rounded-lg">
-                <button
-                  className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
-                  onClick={() => setIsToTokenOpen(!isToTokenOpen)}
-                >
-                  <div
-                    className={`w-5 sm:w-6 h-5 sm:h-6 rounded-full ${toToken.iconBg} flex items-center justify-center`}
+                <div className="relative">
+                  <button
+                    className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
+                    onClick={() => setIsToTokenOpen(!isToTokenOpen)}
                   >
-                    <span className="text-white text-xs">{toToken.icon}</span>
-                  </div>
-                  <span className="text-sm sm:text-base">{toToken.symbol}</span>
-                  <span className="text-gray-400">▼</span>
-                </button>
+                    <div className="flex items-center justify-center">
+                      {toToken.icon}
+                    </div>
+                    <span className="text-sm sm:text-base">{toToken.symbol}</span>
+                    <span className="text-gray-400">▼</span>
+                  </button>
+                  <TokenDropdown
+                    isOpen={isToTokenOpen}
+                    onClose={() => setIsToTokenOpen(false)}
+                    onSelect={setToToken}
+                    selectedToken={toToken}
+                    excludeToken={fromToken.symbol}
+                  />
+                </div>
                 <input
                   type="text"
                   className="flex-1 bg-transparent text-xl sm:text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis"
@@ -383,20 +464,25 @@ function SwapComponent() {
                 </div>
               </div>
               <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 sm:p-3 rounded-lg">
-                <button
-                  className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
-                  onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
-                >
-                  <div
-                    className={`w-5 sm:w-6 h-5 sm:h-6 rounded-full ${fromToken.iconBg} flex items-center justify-center`}
+                <div className="relative">
+                  <button
+                    className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
+                    onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
                   >
-                    <span className="text-white text-xs">{fromToken.icon}</span>
-                  </div>
-                  <span className="text-sm sm:text-base">
-                    {fromToken.symbol}
-                  </span>
-                  <span className="text-gray-400">▼</span>
-                </button>
+                    <div className="flex items-center justify-center">
+                      {fromToken.icon}
+                    </div>
+                    <span className="text-sm sm:text-base">{fromToken.symbol}</span>
+                    <span className="text-gray-400">▼</span>
+                  </button>
+                  <TokenDropdown
+                    isOpen={isFromTokenOpen}
+                    onClose={() => setIsFromTokenOpen(false)}
+                    onSelect={setFromToken}
+                    selectedToken={fromToken}
+                    excludeToken={toToken.symbol}
+                  />
+                </div>
                 <input
                   type="text"
                   className="flex-1 bg-transparent text-xl sm:text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis"
@@ -480,18 +566,25 @@ function SwapComponent() {
                 </span>
               </div>
               <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 sm:p-3 rounded-lg">
-                <button
-                  className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
-                  onClick={() => setIsToTokenOpen(!isToTokenOpen)}
-                >
-                  <div
-                    className={`w-5 sm:w-6 h-5 sm:h-6 rounded-full ${toToken.iconBg} flex items-center justify-center`}
+                <div className="relative">
+                  <button
+                    className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
+                    onClick={() => setIsToTokenOpen(!isToTokenOpen)}
                   >
-                    <span className="text-white text-xs">{toToken.icon}</span>
-                  </div>
-                  <span className="text-sm sm:text-base">{toToken.symbol}</span>
-                  <span className="text-gray-400">▼</span>
-                </button>
+                    <div className="flex items-center justify-center">
+                      {toToken.icon}
+                    </div>
+                    <span className="text-sm sm:text-base">{toToken.symbol}</span>
+                    <span className="text-gray-400">▼</span>
+                  </button>
+                  <TokenDropdown
+                    isOpen={isToTokenOpen}
+                    onClose={() => setIsToTokenOpen(false)}
+                    onSelect={setToToken}
+                    selectedToken={toToken}
+                    excludeToken={fromToken.symbol}
+                  />
+                </div>
                 <input
                   type="text"
                   className="flex-1 bg-transparent text-xl sm:text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis"
@@ -508,7 +601,7 @@ function SwapComponent() {
             {/* Place Order Button */}
             <div className="mt-3 sm:mt-4">
               <button className="w-full py-2.5 sm:py-3 bg-fuel-green text-fuel-dark-900 rounded-lg font-medium hover:bg-opacity-90 transition-colors text-sm sm:text-base">
-                Place limit order
+                Place Order
               </button>
             </div>
           </div>
