@@ -133,11 +133,11 @@ function SwapComponent() {
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center pt-4 sm:pt-8">
-      <div className="w-full max-w-[460px] mx-auto px-3 sm:px-4">
+    <div className="flex-1 flex flex-col items-center pt-1 sm:pt-3">
+      <div className="w-full max-w-[420px] mx-auto px-2">
         {/* Swap Type Selector */}
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
-          <div className="flex space-x-3 sm:space-x-4 text-xs sm:text-sm font-medium">
+        <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+          <div className="flex space-x-2 sm:space-x-3 text-[10px] sm:text-xs font-medium">
             <button
               className={
                 activeSwapType === "swap"
@@ -314,19 +314,19 @@ function SwapComponent() {
 
         {/* Conditional render based on activeSwapType */}
         {activeSwapType === "swap" ? (
-          <div className="bg-fuel-dark-800 rounded-xl p-3 sm:p-4 shadow-lg">
+          <div className="bg-fuel-dark-800 rounded-xl p-1.5 sm:p-2 shadow-lg">
             {/* From Token */}
-            <div className="space-y-2 sm:space-y-3">
+            <div className="space-y-1 sm:space-y-1.5">
               <div className="flex justify-between text-[10px] sm:text-xs">
                 <span className="text-gray-400">From</span>
                 <span className="text-gray-400">
                   Balance: {fromToken.balance} {fromToken.symbol}
                 </span>
               </div>
-              <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 sm:p-3 rounded-lg">
+              <div className="flex items-center space-x-2 bg-fuel-dark-700 p-1.5 sm:p-2 rounded-lg">
                 <div className="relative">
                   <button
-                    className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
+                    className="flex items-center space-x-1.5 px-1.5 py-1 rounded-lg hover:bg-fuel-dark-600 min-w-[90px] sm:min-w-[110px]"
                     onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
                   >
                     <div className="flex items-center justify-center">
@@ -345,19 +345,19 @@ function SwapComponent() {
                 </div>
                 <input
                   type="text"
-                  className="flex-1 bg-transparent text-xl sm:text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis"
+                  className="flex-1 bg-transparent text-lg sm:text-xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis"
                   placeholder="0.00"
                   value={fromAmount}
                   onChange={(e) => setFromAmount(e.target.value)}
                 />
               </div>
-              <div className="text-right text-xs sm:text-sm text-gray-400">
+              <div className="text-right text-[10px] sm:text-xs text-gray-400">
                 ≈ ${fromToken.usdValue}
               </div>
             </div>
 
             {/* Swap Direction Button */}
-            <div className="flex justify-center my-2 sm:my-3">
+            <div className="flex justify-center my-1 sm:my-1.5">
               <button
                 className="p-1.5 sm:p-2 rounded-lg bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-colors"
                 onClick={handleSwapTokens}
@@ -367,14 +367,14 @@ function SwapComponent() {
             </div>
 
             {/* To Token */}
-            <div className="space-y-2 sm:space-y-3">
+            <div className="space-y-1.5 sm:space-y-2">
               <div className="flex justify-between text-[10px] sm:text-xs">
                 <span className="text-gray-400">To</span>
                 <span className="text-gray-400">
                   Balance: {toToken.balance} {toToken.symbol}
                 </span>
               </div>
-              <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 sm:p-3 rounded-lg">
+              <div className="flex items-center space-x-2 bg-fuel-dark-700 p-1.5 sm:p-2 rounded-lg">
                 <div className="relative">
                   <button
                     className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
@@ -402,14 +402,14 @@ function SwapComponent() {
                   onChange={(e) => setToAmount(e.target.value)}
                 />
               </div>
-              <div className="text-right text-xs sm:text-sm text-gray-400">
+              <div className="text-right text-[10px] sm:text-xs text-gray-400">
                 ≈ ${toToken.usdValue}
               </div>
             </div>
 
             {/* Additional Info */}
-            <div className="mt-3 sm:mt-4 space-y-2">
-              <div className="flex items-center justify-between text-xs sm:text-sm p-2 sm:p-3 rounded-lg bg-fuel-dark-700">
+            <div className="mt-1.5 sm:mt-2 space-y-1">
+              <div className="flex items-center justify-between text-[10px] sm:text-xs p-1 sm:p-1.5 rounded-lg bg-fuel-dark-700">
                 <div className="flex items-center space-x-1">
                   <span className="text-gray-400">
                     1 ETH = 78,079.0602 FUEL
@@ -419,7 +419,7 @@ function SwapComponent() {
                 <span className="text-gray-400">(≈ $3,137.58)</span>
               </div>
 
-              <div className="space-y-1.5 sm:space-y-2 p-2 sm:p-3 rounded-lg bg-fuel-dark-700">
+              <div className="space-y-0.5 sm:space-y-1 p-1 sm:p-1.5 rounded-lg bg-fuel-dark-700">
                 <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-gray-400">Network costs (est.)</span>
                   <span>5.486 FUEL + gas (≈ $0.38)</span>
@@ -440,7 +440,7 @@ function SwapComponent() {
             </div>
 
             {/* Swap Button */}
-            <div className="mt-3 sm:mt-4">
+            <div className="mt-1.5 sm:mt-2">
               <WalletConnect
                 variant="trade"
                 tradeType="buy"
@@ -449,9 +449,9 @@ function SwapComponent() {
             </div>
           </div>
         ) : (
-          <div className="bg-fuel-dark-800 rounded-xl p-3 sm:p-4 shadow-lg">
+          <div className="bg-fuel-dark-800 rounded-xl p-1.5 sm:p-2 shadow-lg">
             {/* Sell Amount Section */}
-            <div className="space-y-2 sm:space-y-3">
+            <div className="space-y-1 sm:space-y-1.5">
               <div className="flex justify-between text-[10px] sm:text-xs">
                 <span className="text-gray-400">Sell amount</span>
                 <div className="flex items-center space-x-2">
@@ -463,10 +463,10 @@ function SwapComponent() {
                   </button>
                 </div>
               </div>
-              <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 sm:p-3 rounded-lg">
+              <div className="flex items-center space-x-2 bg-fuel-dark-700 p-1.5 sm:p-2 rounded-lg">
                 <div className="relative">
                   <button
-                    className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
+                    className="flex items-center space-x-1.5 px-1.5 py-1 rounded-lg hover:bg-fuel-dark-600 min-w-[90px] sm:min-w-[110px]"
                     onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
                   >
                     <div className="flex items-center justify-center">
@@ -485,27 +485,27 @@ function SwapComponent() {
                 </div>
                 <input
                   type="text"
-                  className="flex-1 bg-transparent text-xl sm:text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis"
+                  className="flex-1 bg-transparent text-lg sm:text-xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis"
                   placeholder="0.00"
                   value={fromAmount}
                   onChange={(e) => setFromAmount(e.target.value)}
                 />
               </div>
-              <div className="text-right text-xs sm:text-sm text-gray-400">
+              <div className="text-right text-[10px] sm:text-xs text-gray-400">
                 ≈ ${fromToken.usdValue}
               </div>
             </div>
 
             {/* Limit Price Section */}
-            <div className="grid grid-cols-3 gap-2 mt-3 sm:mt-4">
+            <div className="grid grid-cols-3 gap-1 mt-1.5 sm:mt-2">
               <div className="col-span-2">
-                <div className="text-[10px] sm:text-xs text-gray-400 mb-1.5 sm:mb-2">
+                <div className="text-[10px] sm:text-xs text-gray-400 mb-0.5 sm:mb-1">
                   Limit price <span className="text-green-400">(+0.1%)</span>
                 </div>
-                <div className="flex items-center bg-fuel-dark-700 p-2 sm:p-3 rounded-lg">
+                <div className="flex items-center bg-fuel-dark-700 p-1.5 sm:p-2 rounded-lg h-[32px] sm:h-[36px]">
                   <input
                     type="text"
-                    className="flex-1 bg-transparent text-base sm:text-lg font-medium focus:outline-none min-w-0 overflow-hidden text-ellipsis"
+                    className="flex-1 bg-transparent text-xs sm:text-sm font-medium focus:outline-none min-w-0 overflow-hidden text-ellipsis"
                     placeholder="0.000000"
                     value={limitPrice}
                     onChange={(e) => setLimitPrice(e.target.value)}
@@ -516,12 +516,12 @@ function SwapComponent() {
                 </div>
               </div>
               <div>
-                <div className="text-[10px] sm:text-xs text-gray-400 mb-1.5 sm:mb-2">
+                <div className="text-[10px] sm:text-xs text-gray-400 mb-0.5 sm:mb-1">
                   Expiry
                 </div>
                 <div className="relative">
                   <button
-                    className="w-full bg-fuel-dark-700 p-2 sm:p-3 rounded-lg text-left flex items-center justify-between text-xs sm:text-sm"
+                    className="w-full bg-fuel-dark-700 p-1.5 sm:p-2 rounded-lg text-left flex items-center justify-between text-xs sm:text-sm h-[32px] sm:h-[36px]"
                     onClick={() => setIsExpiryOpen(!isExpiryOpen)}
                   >
                     <span>{expiryDays} Days</span>
@@ -548,7 +548,7 @@ function SwapComponent() {
             </div>
 
             {/* Swap Direction Button */}
-            <div className="flex justify-center my-2 sm:my-4">
+            <div className="flex justify-center my-1 sm:my-1.5">
               <button
                 className="p-1.5 sm:p-2 rounded-lg bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-colors"
                 onClick={handleSwapTokens}
@@ -558,14 +558,14 @@ function SwapComponent() {
             </div>
 
             {/* Receive Amount Section */}
-            <div className="space-y-2 sm:space-y-3">
+            <div className="space-y-1.5 sm:space-y-2">
               <div className="flex justify-between text-[10px] sm:text-xs">
                 <span className="text-gray-400">Receive at least</span>
                 <span className="text-gray-400">
                   Balance: {toToken.balance} {toToken.symbol}
                 </span>
               </div>
-              <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 sm:p-3 rounded-lg">
+              <div className="flex items-center space-x-2 bg-fuel-dark-700 p-1.5 sm:p-2 rounded-lg">
                 <div className="relative">
                   <button
                     className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
@@ -593,13 +593,41 @@ function SwapComponent() {
                   onChange={(e) => setToAmount(e.target.value)}
                 />
               </div>
-              <div className="text-right text-xs sm:text-sm text-gray-400">
+              <div className="text-right text-[10px] sm:text-xs text-gray-400">
                 ≈ ${toToken.usdValue}
               </div>
             </div>
 
+            {/* Additional Info */}
+            <div className="mt-1.5 sm:mt-2 space-y-1">
+              <div className="flex items-center justify-between text-[10px] sm:text-xs p-1 sm:p-1.5 rounded-lg bg-fuel-dark-700">
+                <div className="flex items-center space-x-1">
+                  <span className="text-gray-400">
+                    1 ETH = 78,079.0602 FUEL
+                  </span>
+                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
+                </div>
+                <span className="text-gray-400">(≈ $3,137.58)</span>
+              </div>
+
+              <div className="space-y-0.5 sm:space-y-1 p-1 sm:p-1.5 rounded-lg bg-fuel-dark-700">
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-gray-400">Network costs (est.)</span>
+                  <span>5.486 FUEL + gas (≈ $0.38)</span>
+                </div>
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-gray-400">Order expiration</span>
+                  <span>{expiryDays} days</span>
+                </div>
+                <div className="flex justify-between text-xs sm:text-sm">
+                  <span className="text-gray-400">Partial fills</span>
+                  <span>{enablePartialExecutions ? 'Enabled' : 'Disabled'}</span>
+                </div>
+              </div>
+            </div>
+
             {/* Place Order Button */}
-            <div className="mt-3 sm:mt-4">
+            <div className="mt-1.5 sm:mt-2">
               <button className="w-full py-2.5 sm:py-3 bg-fuel-green text-fuel-dark-900 rounded-lg font-medium hover:bg-opacity-90 transition-colors text-sm sm:text-base">
                 Place Order
               </button>

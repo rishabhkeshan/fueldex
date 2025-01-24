@@ -33,38 +33,38 @@ const mockOrderBook = {
   ]
 };
 
-// Update the mock trades data
+// Update the mock trades data to include timestamps
 const mockTrades = [
-  { price: 0.04200, quantity: 2488.5714, time: '15:14:33' },
-  { price: 0.04200, quantity: 1885.9524, time: '15:14:33' },
-  { price: 0.04200, quantity: 1462.3810, time: '15:14:33' },
-  { price: 0.04198, quantity: 2895.2381, time: '15:14:32' },
-  { price: 0.04197, quantity: 1468.1292, time: '15:14:31' },
-  { price: 0.04201, quantity: 1458.2168, time: '14:56:25' },
-  { price: 0.04202, quantity: 1412.2567, time: '14:47:16' },
-  { price: 0.04100, quantity: 40.0000, time: '13:35:04' },
-  { price: 0.04335, quantity: 30.0000, time: '14:00:48' },
-  { price: 0.04650, quantity: 76068.6449, time: '21:40:29' },
-  { price: 0.04650, quantity: 9652.4544, time: '21:33:58' },
-  { price: 0.04648, quantity: 76231.6484, time: '21:28:44' },
-  { price: 0.04652, quantity: 10724.4993, time: '21:27:23' },
-  { price: 0.04650, quantity: 62372.0000, time: '21:24:31' },
-  { price: 0.04649, quantity: 76108.2142, time: '21:21:37' },
-  { price: 0.04650, quantity: 71486.4012, time: '21:18:52' },
-  { price: 0.04651, quantity: 70296.0842, time: '21:13:58' },
-  { price: 0.04650, quantity: 76151.9388, time: '21:07:07' },
-  { price: 0.04649, quantity: 74242.4428, time: '20:59:36' },
-  { price: 0.04650, quantity: 74058.6566, time: '20:59:13' },
-  { price: 0.04648, quantity: 74812.3014, time: '20:55:36' },
-  { price: 0.04650, quantity: 73319.4221, time: '20:51:22' },
-  { price: 0.04649, quantity: 72813.2808, time: '20:50:00' },
-  { price: 0.04650, quantity: 72936.2528, time: '20:48:48' },
-  { price: 0.04655, quantity: 70294.4081, time: '20:47:42' },
-  { price: 0.04655, quantity: 70523.4959, time: '20:44:24' },
-  { price: 0.04655, quantity: 71431.0845, time: '20:42:45' },
-  { price: 0.04655, quantity: 70660.4605, time: '20:41:37' },
-  { price: 0.04444, quantity: 67316.0272, time: '20:40:22' },
-  { price: 0.04444, quantity: 68001.9068, time: '20:28:55' }
+  { price: 0.04200, quantity: 2488.5714, time: '15:14:33', timestamp: Date.now() - 1000 * 60 * 5 },
+  { price: 0.04200, quantity: 1885.9524, time: '15:14:33', timestamp: Date.now() - 1000 * 60 * 4 },
+  { price: 0.04200, quantity: 1462.3810, time: '15:14:33', timestamp: Date.now() - 1000 * 60 * 3 },
+  { price: 0.04198, quantity: 2895.2381, time: '15:14:32', timestamp: Date.now() - 1000 * 60 * 2 },
+  { price: 0.04197, quantity: 1468.1292, time: '15:14:31', timestamp: Date.now() - 1000 * 60 * 1 },
+  { price: 0.04201, quantity: 1458.2168, time: '14:56:25', timestamp: Date.now() - 1000 * 60 * 5 },
+  { price: 0.04202, quantity: 1412.2567, time: '14:47:16', timestamp: Date.now() - 1000 * 60 * 4 },
+  { price: 0.04100, quantity: 40.0000, time: '13:35:04', timestamp: Date.now() - 1000 * 60 * 3 },
+  { price: 0.04335, quantity: 30.0000, time: '14:00:48', timestamp: Date.now() - 1000 * 60 * 2 },
+  { price: 0.04650, quantity: 76068.6449, time: '21:40:29', timestamp: Date.now() - 1000 * 60 * 1 },
+  { price: 0.04650, quantity: 9652.4544, time: '21:33:58', timestamp: Date.now() - 1000 * 60 * 5 },
+  { price: 0.04648, quantity: 76231.6484, time: '21:28:44', timestamp: Date.now() - 1000 * 60 * 4 },
+  { price: 0.04652, quantity: 10724.4993, time: '21:27:23', timestamp: Date.now() - 1000 * 60 * 3 },
+  { price: 0.04650, quantity: 62372.0000, time: '21:24:31', timestamp: Date.now() - 1000 * 60 * 2 },
+  { price: 0.04649, quantity: 76108.2142, time: '21:21:37', timestamp: Date.now() - 1000 * 60 * 1 },
+  { price: 0.04650, quantity: 71486.4012, time: '21:18:52', timestamp: Date.now() - 1000 * 60 * 5 },
+  { price: 0.04651, quantity: 70296.0842, time: '21:13:58', timestamp: Date.now() - 1000 * 60 * 4 },
+  { price: 0.04650, quantity: 76151.9388, time: '21:07:07', timestamp: Date.now() - 1000 * 60 * 3 },
+  { price: 0.04649, quantity: 74242.4428, time: '20:59:36', timestamp: Date.now() - 1000 * 60 * 2 },
+  { price: 0.04650, quantity: 74058.6566, time: '20:59:13', timestamp: Date.now() - 1000 * 60 * 1 },
+  { price: 0.04648, quantity: 74812.3014, time: '20:55:36', timestamp: Date.now() - 1000 * 60 * 5 },
+  { price: 0.04650, quantity: 73319.4221, time: '20:51:22', timestamp: Date.now() - 1000 * 60 * 4 },
+  { price: 0.04649, quantity: 72813.2808, time: '20:50:00', timestamp: Date.now() - 1000 * 60 * 3 },
+  { price: 0.04650, quantity: 72936.2528, time: '20:48:48', timestamp: Date.now() - 1000 * 60 * 2 },
+  { price: 0.04655, quantity: 70294.4081, time: '20:47:42', timestamp: Date.now() - 1000 * 60 * 1 },
+  { price: 0.04655, quantity: 70523.4959, time: '20:44:24', timestamp: Date.now() - 1000 * 60 * 5 },
+  { price: 0.04655, quantity: 71431.0845, time: '20:42:45', timestamp: Date.now() - 1000 * 60 * 4 },
+  { price: 0.04655, quantity: 70660.4605, time: '20:41:37', timestamp: Date.now() - 1000 * 60 * 3 },
+  { price: 0.04444, quantity: 67316.0272, time: '20:40:22', timestamp: Date.now() - 1000 * 60 * 2 },
+  { price: 0.04444, quantity: 68001.9068, time: '20:28:55', timestamp: Date.now() - 1000 * 60 * 1 },
 ];
 
 // Add these helper functions at the top of the file, after mock data
@@ -100,6 +100,12 @@ const getTokenIcon = (token: string) => {
       return USDCIcon;
   }
 };
+
+// Add to your existing types
+interface UserTrade extends Trade {
+  type: 'buy' | 'sell';
+  timestamp: number;
+}
 
 function App() {
   const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
@@ -141,6 +147,9 @@ function App() {
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const [orderHistory, setOrderHistory] = useState<HistoricalOrder[]>([]);
 
+  // Add state for user trades
+  const [userTrades, setUserTrades] = useState<UserTrade[]>([]);
+
   const tradingService = useMemo(() => new TradingService(), []);
 
   const handlePlaceOrder = useCallback(() => {
@@ -159,6 +168,16 @@ function App() {
     // Update trades
     if (newTrades.length > 0) {
       setTrades(prev => [...newTrades, ...prev].slice(0, 30));
+      
+      // Add user trade marker
+      const userTrade: UserTrade = {
+        price: parseFloat(price),
+        quantity: parseFloat(size),
+        time: new Date().toLocaleTimeString(),
+        timestamp: Date.now(),
+        type: tradeType,
+      };
+      setUserTrades(prev => [...prev, userTrade]);
     }
 
     // Add to active orders if partially filled or not filled at all
@@ -405,7 +424,10 @@ function App() {
               <div className="flex-1 overflow-hidden">
                 {mobileView === "chart" && (
                   <div className="h-[300px]">
-                    <TradingViewWidget />
+                    <TradingViewWidget 
+                      trades={trades} 
+                      userTrades={userTrades}
+                    />
                   </div>
                 )}
 
@@ -835,7 +857,10 @@ function App() {
                 <div className="flex-[3] flex flex-col min-h-0">
                   {/* Chart */}
                   <div className="flex-1 min-h-[400px] bg-fuel-dark-800 border-r border-fuel-dark-600">
-                    <TradingViewWidget />
+                    <TradingViewWidget 
+                      trades={trades} 
+                      userTrades={userTrades}
+                    />
                   </div>
 
                   {/* Desktop Orders and History Section */}
