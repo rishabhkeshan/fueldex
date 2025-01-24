@@ -153,63 +153,144 @@ function App() {
   const tradingService = useMemo(() => new TradingService(), []);
 
   const handlePlaceOrder = useCallback(() => {
-    if (!price || !size) return;
+    if (!size) return;
 
-    const { trades: newTrades, updatedOrderBook, remainingOrder } = tradingService.createOrder(
-      tradeType,
-      parseFloat(price),
-      parseFloat(size),
-      orderBook
-    );
-
-    // Update orderbook
-    setOrderBook(updatedOrderBook);
-
-    // Update trades
-    if (newTrades.length > 0) {
-      setTrades(prev => [...newTrades, ...prev].slice(0, 30));
+    if (orderType === 'market') {
+      // For market orders, match against existing orderbook immediately
+      const sizeToFill = parseFloat(size);
+      let remainingSize = sizeToFill;
+      const newTrades: Trade[] = [];
+      const updatedOrders = { ...orderBook };
       
-      // Add user trade marker
-      const userTrade: UserTrade = {
-        price: parseFloat(price),
-        quantity: parseFloat(size),
-        time: new Date().toLocaleTimeString(),
-        timestamp: Date.now(),
-        type: tradeType,
-      };
-      setUserTrades(prev => [...prev, userTrade]);
-    }
+      // For buy orders, match against asks (starting from lowest price)
+      // For sell orders, match against bids (starting from highest price)
+      const ordersToMatch = tradeType === 'buy' 
+        ? [...orderBook.asks].sort((a, b) => a.price - b.price)
+        : [...orderBook.bids].sort((a, b) => b.price - a.price);
 
-    // Add to active orders if partially filled or not filled at all
-    if (remainingOrder) {
-      const activeOrder: ActiveOrder = {
-        ...remainingOrder,
-        status: newTrades.length > 0 ? 'partial' : 'open',
-        filled: newTrades.reduce((acc, trade) => acc + trade.quantity, 0)
-      };
-      setActiveOrders(prev => [...prev, activeOrder]);
-    } 
-    
-    // Add to history if fully filled
-    if (newTrades.length > 0 && !remainingOrder) {
-      const historicalOrder: HistoricalOrder = {
-        id: tradingService.generateOrderId(),
-        price: parseFloat(price),
-        size: parseFloat(size),
-        total: parseFloat(price) * parseFloat(size),
-        type: tradeType,
-        timestamp: Date.now(),
-        status: 'filled',
-        filled: parseFloat(size),
-        completedAt: Date.now()
-      };
-      setOrderHistory(prev => [historicalOrder, ...prev]);
+      for (const order of ordersToMatch) {
+        if (remainingSize <= 0) break;
+
+        const fillSize = Math.min(remainingSize, order.size);
+        remainingSize -= fillSize;
+
+        // Create trade
+        const trade: Trade = {
+          price: order.price,
+          quantity: fillSize,
+          time: new Date().toLocaleTimeString(),
+          timestamp: Date.now(),
+          type: tradeType
+        };
+        newTrades.push(trade);
+
+        // Update order size or remove if fully filled
+        if (tradeType === 'buy') {
+          updatedOrders.asks = updatedOrders.asks.map(ask => 
+            ask.price === order.price 
+              ? { ...ask, size: ask.size - fillSize }
+              : ask
+          ).filter(ask => ask.size > 0);
+        } else {
+          updatedOrders.bids = updatedOrders.bids.map(bid => 
+            bid.price === order.price 
+              ? { ...bid, size: bid.size - fillSize }
+              : bid
+          ).filter(bid => bid.size > 0);
+        }
+      }
+
+      if (newTrades.length > 0) {
+        // Update orderbook
+        setOrderBook(updatedOrders);
+
+        // Update trades list
+        setTrades(prev => [...newTrades, ...prev].slice(0, 30));
+
+        // Add to user trades
+        newTrades.forEach(trade => {
+          const userTrade: UserTrade = {
+            ...trade,
+            type: tradeType,
+          };
+          setUserTrades(prev => [...prev, userTrade]);
+        });
+
+        // Add to history
+        const historicalOrder: HistoricalOrder = {
+          id: tradingService.generateOrderId(),
+          price: newTrades.reduce((avg, t) => avg + t.price * t.quantity, 0) / 
+                newTrades.reduce((sum, t) => sum + t.quantity, 0),
+          size: sizeToFill,
+          total: newTrades.reduce((sum, t) => sum + t.price * t.quantity, 0),
+          type: tradeType,
+          timestamp: Date.now(),
+          status: remainingSize === 0 ? 'filled' : 'partial',
+          filled: sizeToFill - remainingSize,
+          completedAt: Date.now()
+        };
+        setOrderHistory(prev => [historicalOrder, ...prev]);
+      }
+    } else {
+      // Existing limit order logic
+      if (!price) return;
+
+      const { trades: newTrades, updatedOrderBook, remainingOrder } = tradingService.createOrder(
+        tradeType,
+        parseFloat(price),
+        parseFloat(size),
+        orderBook
+      );
+
+      // Update orderbook
+      setOrderBook(updatedOrderBook);
+
+      // Update trades
+      if (newTrades.length > 0) {
+        setTrades(prev => [...newTrades, ...prev].slice(0, 30));
+        
+        // Add user trade marker
+        const userTrade: UserTrade = {
+          price: parseFloat(price),
+          quantity: parseFloat(size),
+          time: new Date().toLocaleTimeString(),
+          timestamp: Date.now(),
+          type: tradeType,
+        };
+        setUserTrades(prev => [...prev, userTrade]);
+      }
+
+      // Add to active orders if partially filled or not filled at all
+      if (remainingOrder) {
+        const activeOrder: ActiveOrder = {
+          ...remainingOrder,
+          status: newTrades.length > 0 ? 'partial' : 'open',
+          filled: newTrades.reduce((acc, trade) => acc + trade.quantity, 0)
+        };
+        setActiveOrders(prev => [...prev, activeOrder]);
+      } 
+      
+      // Add to history if fully filled
+      if (newTrades.length > 0 && !remainingOrder) {
+        const historicalOrder: HistoricalOrder = {
+          id: tradingService.generateOrderId(),
+          price: parseFloat(price),
+          size: parseFloat(size),
+          total: parseFloat(price) * parseFloat(size),
+          type: tradeType,
+          timestamp: Date.now(),
+          status: 'filled',
+          filled: parseFloat(size),
+          completedAt: Date.now()
+        };
+        setOrderHistory(prev => [historicalOrder, ...prev]);
+      }
     }
 
     // Reset form
     setPrice('');
     setSize('');
-  }, [price, size, tradeType, orderBook, tradingService]);
+  }, [price, size, tradeType, orderType, orderBook, tradingService]);
 
   // Update the cancel order function
   const handleCancelOrder = useCallback((orderId: string) => {
@@ -727,21 +808,21 @@ function App() {
                   </div>
 
                   {/* Order Form - More compact */}
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div>
-                      <div className="flex justify-between text-[10px] mb-0.5">
+                      <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-400">Order type</span>
-                        <span className="text-gray-400">Price</span>
+                        {orderType === 'limit' && <span className="text-gray-400">Price</span>}
                       </div>
                       <div className="flex space-x-2">
                         <div className="flex-1 relative">
                           <button
-                            className="w-full bg-fuel-dark-700 rounded p-1.5 text-xs text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
+                            className="w-full bg-fuel-dark-700 rounded p-2 text-sm text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
                             onClick={() => setIsOrderTypeOpen(!isOrderTypeOpen)}
                           >
                             <span>{orderType.toUpperCase()}</span>
                             <ChevronDown
-                              className={`h-3 w-3 text-gray-400 transition-transform ${
+                              className={`h-4 w-4 text-gray-400 transition-transform ${
                                 isOrderTypeOpen ? "rotate-180" : ""
                               }`}
                             />
@@ -762,6 +843,7 @@ function App() {
                                 onClick={() => {
                                   setOrderType("market");
                                   setIsOrderTypeOpen(false);
+                                  setPrice(''); // Clear price when switching to market
                                 }}
                               >
                                 MARKET
@@ -769,19 +851,20 @@ function App() {
                             </div>
                           )}
                         </div>
-                        <input
-                          type="number"
-                          className="flex-1 bg-fuel-dark-700 rounded p-1.5 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                          placeholder="0.00"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          disabled={orderType === "market"}
-                        />
+                        {orderType === 'limit' && (
+                          <input
+                            type="number"
+                            className="flex-1 bg-fuel-dark-700 rounded p-2 text-sm"
+                            placeholder="0.00"
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                          />
+                        )}
                       </div>
                     </div>
 
                     <div>
-                      <div className="flex justify-between text-[10px] mb-0.5">
+                      <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-400">Order size</span>
                         <span className="text-gray-400">MAX</span>
                       </div>
@@ -837,12 +920,16 @@ function App() {
                     </div> */}
                     <div className="mt-4">
                       <button
-                        className="w-full py-2 text-sm font-medium rounded transition-colors
-                          bg-fuel-green text-fuel-dark-900 hover:bg-opacity-90"
+                        className={`w-full py-2 text-sm font-medium rounded transition-colors
+                          ${
+                            (orderType === 'market' ? Boolean(size) : Boolean(price && size))
+                              ? 'bg-fuel-green text-fuel-dark-900 hover:bg-opacity-90'
+                              : 'bg-fuel-green/50 text-fuel-dark-900 cursor-not-allowed'
+                          }`}
                         onClick={handlePlaceOrder}
-                        disabled={!price || !size}
+                        disabled={orderType === 'market' ? !size : !price || !size}
                       >
-                        Place {tradeType.toUpperCase()} Order
+                        Place Order
                       </button>
                     </div>
                   </div>
@@ -1198,15 +1285,13 @@ function App() {
                       <div>
                         <div className="flex justify-between text-xs mb-1">
                           <span className="text-gray-400">Order type</span>
-                          <span className="text-gray-400">Price</span>
+                          {orderType === 'limit' && <span className="text-gray-400">Price</span>}
                         </div>
                         <div className="flex space-x-2">
                           <div className="flex-1 relative">
                             <button
                               className="w-full bg-fuel-dark-700 rounded p-2 text-sm text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
-                              onClick={() =>
-                                setIsOrderTypeOpen(!isOrderTypeOpen)
-                              }
+                              onClick={() => setIsOrderTypeOpen(!isOrderTypeOpen)}
                             >
                               <span>{orderType.toUpperCase()}</span>
                               <ChevronDown
@@ -1231,6 +1316,7 @@ function App() {
                                   onClick={() => {
                                     setOrderType("market");
                                     setIsOrderTypeOpen(false);
+                                    setPrice(''); // Clear price when switching to market
                                   }}
                                 >
                                   MARKET
@@ -1238,14 +1324,15 @@ function App() {
                               </div>
                             )}
                           </div>
-                          <input
-                            type="number"
-                            className="flex-1 bg-fuel-dark-700 rounded p-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                            placeholder="0.00"
-                            value={price}
-                            onChange={(e) => setPrice(e.target.value)}
-                            disabled={orderType === "market"}
-                          />
+                          {orderType === 'limit' && (
+                            <input
+                              type="number"
+                              className="flex-1 bg-fuel-dark-700 rounded p-2 text-sm"
+                              placeholder="0.00"
+                              value={price}
+                              onChange={(e) => setPrice(e.target.value)}
+                            />
+                          )}
                         </div>
                       </div>
 
@@ -1305,10 +1392,14 @@ function App() {
 
                     <div className="mt-4">
                       <button
-                        className="w-full py-2 text-sm font-medium rounded transition-colors
-                          bg-fuel-green text-fuel-dark-900 hover:bg-opacity-90"
+                        className={`w-full py-2 text-sm font-medium rounded transition-colors
+                          ${
+                            (orderType === 'market' ? Boolean(size) : Boolean(price && size))
+                              ? 'bg-fuel-green text-fuel-dark-900 hover:bg-opacity-90'
+                              : 'bg-fuel-green/50 text-fuel-dark-900 cursor-not-allowed'
+                          }`}
                         onClick={handlePlaceOrder}
-                        disabled={!price || !size}
+                        disabled={orderType === 'market' ? !size : !price || !size}
                       >
                         Place Order
                       </button>

@@ -284,7 +284,7 @@ function TradingViewWidget({ trades, userTrades = [] }: TradingViewWidgetProps) 
     });
   }, [selectedTimeframe]);
 
-  // Add new effect for handling trade markers
+  // Update the trade markers effect
   useEffect(() => {
     if (!candlestickSeriesRef.current || !userTrades.length) return;
 
@@ -294,20 +294,19 @@ function TradingViewWidget({ trades, userTrades = [] }: TradingViewWidgetProps) 
     // Create markers for user trades
     const markers = userTrades.map(trade => ({
       time: (Math.floor(trade.timestamp / 1000)) as UTCTimestamp,
-      position: 'aboveBar',
+      position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
       color: trade.type === 'buy' ? '#26a69a' : '#ef5350',
-      shape: 'circle',
-      text: trade.type === 'buy' ? 'B' : 'S',
+      shape: trade.type === 'buy' ? 'arrowUp' : 'arrowDown',
+      text: `${trade.type.toUpperCase()} @ ${trade.price.toFixed(5)}`,
       size: 1,
       borderColor: trade.type === 'buy' ? '#26a69a' : '#ef5350',
       backgroundColor: trade.type === 'buy' ? '#26a69a' : '#ef5350',
       fontFamily: 'monospace',
-      fontSize: 9,
-      fontWeight: '600',
-      textColor: '#ffffff',
-      // position: trade.type === 'buy' ? 'belowBar' : 'aboveBar',
+      fontSize: 11,
+      fontWeight: '500',
+      textColor: trade.type === 'buy' ? '#26a69a' : '#ef5350',
       yAnchor: trade.type === 'buy' ? 1 : 0,
-      offsetY: trade.type === 'buy' ? 5 : -5
+      offsetY: trade.type === 'buy' ? 8 : -8
     }));
 
     // Set new markers
