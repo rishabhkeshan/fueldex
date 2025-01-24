@@ -10,9 +10,14 @@ export interface Order {
 export interface Trade {
   price: number;
   quantity: number;
-  time: string;
-  type: 'buy' | 'sell';
   timestamp: number;
+  time?: string;
+  type?: 'buy' | 'sell';
+  open?: number;
+  high?: number;
+  low?: number;
+  close?: number;
+  volume?: number;
 }
 
 export interface OrderBook {

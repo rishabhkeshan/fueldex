@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { ArrowRightLeft, ChevronDown } from 'lucide-react';
 import { AdvancedChart } from "react-tradingview-embed";
 import FuelLogo from "./assets/Fuel.svg";
@@ -12,6 +12,155 @@ import P2PComponent from './components/P2PComponent';
 import ETHIcon from './assets/eth.svg';
 import USDCIcon from './assets/usdc.svg';
 import USDTIcon from './assets/usdt.svg';
+import OrderConfirmationModal from './components/OrderConfirmationModal';
+
+// Add these constants at the top after imports
+const PAIR_PRICE_RANGES = {
+  'ETH/USDT': {
+    basePrice: 3400,
+    tickSize: 0.01,
+    minQty: 0.001,
+    baseAsset: 'ETH',
+    quoteAsset: 'USDT'
+  },
+  'ETH/USDC': {
+    basePrice: 3400,
+    tickSize: 0.01,
+    minQty: 0.001,
+    baseAsset: 'ETH',
+    quoteAsset: 'USDC'
+  },
+  'USDC/USDT': {
+    basePrice: 1,
+    tickSize: 0.0001,
+    minQty: 1,
+    baseAsset: 'USDC',
+    quoteAsset: 'USDT'
+  }
+} as const;
+
+// Replace the FIXED_ORDERBOOKS constant
+const FIXED_ORDERBOOKS = {
+  'ETH/USDT': {
+    asks: [
+      { price: 3501.50, size: 1.5000, total: 1.5000 },
+      { price: 3502.25, size: 2.0000, total: 3.5000 },
+      { price: 3503.00, size: 0.5000, total: 4.0000 },
+      { price: 3503.75, size: 4.5000, total: 8.5000 },
+      { price: 3504.50, size: 2.5000, total: 11.0000 },
+      { price: 3505.25, size: 5.0000, total: 16.0000 }
+    ],
+    bids: [
+      { price: 3500.75, size: 3.9050, total: 3.9050 },
+      { price: 3500.00, size: 2.3150, total: 6.2200 },
+      { price: 3499.25, size: 0.5000, total: 6.7200 },
+      { price: 3498.50, size: 5.9300, total: 12.6500 },
+      { price: 3497.75, size: 2.4850, total: 15.1350 },
+      { price: 3497.00, size: 1.7800, total: 16.9150 }
+    ]
+  },
+  'ETH/USDC': {
+    asks: [
+      { price: 3501.45, size: 1.2500, total: 1.2500 },
+      { price: 3502.20, size: 2.1000, total: 3.3500 },
+      { price: 3502.95, size: 0.7500, total: 4.1000 },
+      { price: 3503.70, size: 3.5000, total: 7.6000 },
+      { price: 3504.45, size: 2.2500, total: 9.8500 },
+      { price: 3505.20, size: 4.0000, total: 13.8500 }
+    ],
+    bids: [
+      { price: 3500.70, size: 2.9050, total: 2.9050 },
+      { price: 3499.95, size: 1.8150, total: 4.7200 },
+      { price: 3499.20, size: 0.7500, total: 5.4700 },
+      { price: 3498.45, size: 4.9300, total: 10.4000 },
+      { price: 3497.70, size: 2.1850, total: 12.5850 },
+      { price: 3496.95, size: 1.5800, total: 14.1650 }
+    ]
+  },
+  'USDC/USDT': {
+    asks: [
+      { price: 1.0002, size: 10000, total: 10000 },
+      { price: 1.0003, size: 15000, total: 25000 },
+      { price: 1.0004, size: 5000, total: 30000 },
+      { price: 1.0005, size: 25000, total: 55000 },
+      { price: 1.0006, size: 20000, total: 75000 },
+      { price: 1.0007, size: 30000, total: 105000 }
+    ],
+    bids: [
+      { price: 1.0001, size: 12000, total: 12000 },
+      { price: 1.0000, size: 18000, total: 30000 },
+      { price: 0.9999, size: 8000, total: 38000 },
+      { price: 0.9998, size: 22000, total: 60000 },
+      { price: 0.9997, size: 15000, total: 75000 },
+      { price: 0.9996, size: 25000, total: 100000 }
+    ]
+  }
+} as const;
+
+// Replace the generateMockOrderBook function with fixed data
+const generateMockOrderBook = (pair: TradingPair) => {
+  return FIXED_ORDERBOOKS[pair];
+};
+
+// Create a more realistic price movement pattern with varied candles
+const generateETHPriceHistory = (startPrice: number, baseTimestamp: number) => {
+  const pricePoints = [
+    // Generate price history around 3500 range
+    ...Array.from({ length: 1152 }, (_, i) => { // 4 days worth of 5-min candles
+      const progress = i / 1152;
+      const trend = 50 * progress; // Smaller trend to stay in range
+      const volatility = 30; // Reduced volatility
+      const noise = (Math.random() - 0.5) * volatility;
+      const basePrice = 3500 + trend + noise; // Start from 3500
+      
+      const candleSpread = 10 + Math.random() * 20; // Smaller candles
+      const isGreen = Math.random() > 0.45;
+      const closePrice = isGreen ? basePrice + candleSpread : basePrice - candleSpread;
+      const quantity = 0.5 + Math.random() * 4.5;
+      
+      return {
+        open: basePrice,
+        close: closePrice,
+        high: Math.max(basePrice + candleSpread, basePrice) + (Math.random() * 10),
+        low: Math.min(basePrice - candleSpread, basePrice) - (Math.random() * 10),
+        volume: quantity * closePrice,
+        quantity,
+        price: closePrice,
+        timestamp: baseTimestamp - (14-1)*24*60*60*1000 + i*5*60*1000,
+        time: new Date(baseTimestamp - (14-1)*24*60*60*1000 + i*5*60*1000).toLocaleTimeString(),
+        type: isGreen ? 'buy' as const : 'sell' as const
+      };
+    })
+  ];
+
+  return pricePoints.map(point => ({
+    ...point,
+    quantity: point.quantity || (1 + Math.random() * 4),
+    price: point.close,
+    time: new Date(point.timestamp).toLocaleTimeString(),
+    type: point.close >= point.open ? 'buy' as const : 'sell' as const
+  }));
+};
+
+// Update the FIXED_TRADES initialization
+const FIXED_TRADES = {
+  'ETH/USDT': generateETHPriceHistory(3500, Date.now()), // Start from 3500
+  'ETH/USDC': generateETHPriceHistory(3500, Date.now()).map(trade => ({
+    ...trade,
+    open: trade.open - (Math.random() * 1 - 0.5), // Smaller variations
+    close: trade.close - (Math.random() * 1 - 0.5),
+    high: trade.high - (Math.random() * 1 - 0.5),
+    low: trade.low - (Math.random() * 1 - 0.5),
+    price: trade.price - (Math.random() * 1 - 0.5),
+  })),
+  'USDC/USDT': Array.from({ length: 672 }, (_, i) => ({
+    price: 1 + (Math.random() * 0.0004 - 0.0002),
+    quantity: 5000 + Math.round(Math.random() * 15000),
+    timestamp: Date.now() - (14-i/48)*24*60*60*1000,
+    time: new Date(Date.now() - (14-i/48)*24*60*60*1000).toLocaleTimeString(),
+    type: Math.random() > 0.5 ? 'buy' as const : 'sell' as const
+  }))
+} as const;
 
 // Mock data for the order book
 const mockOrderBook = {
@@ -107,12 +256,29 @@ interface UserTrade extends Trade {
   timestamp: number;
 }
 
+// Add this type near the top with other types
+type TimeframeOption = {
+  label: string;
+  minutes: number;
+};
+
+// Add these constants
+const TIMEFRAME_OPTIONS: TimeframeOption[] = [
+  { label: '5s', minutes: 5/60 },  // 5 seconds
+  { label: '1m', minutes: 1 },     // 1 minute
+  { label: '5m', minutes: 5 },
+  { label: '15m', minutes: 15 },
+  { label: '1h', minutes: 60 },
+  { label: '4h', minutes: 240 },
+  { label: '1d', minutes: 1440 },
+];
+
 function App() {
   const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
   const [size, setSize] = useState<string>('');
   const [price, setPrice] = useState<string>('');
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
-  const [activeView, setActiveView] = useState<'orderbook' | 'trades'>('orderbook');
+  const [activeView, setActiveView] = useState<'orderbook' | 'trades' | 'chart'>('orderbook');
   const [isOrderTypeOpen, setIsOrderTypeOpen] = useState(false);
   const [isTokenSelectOpen, setIsTokenSelectOpen] = useState(false);
   const [activeScreen, setActiveScreen] = useState<'terminal' | 'swap' | 'p2p'>('terminal');
@@ -121,27 +287,41 @@ function App() {
   const [mobileBottomView, setMobileBottomView] = useState<'orders' | 'history'>('orders');
   const [selectedPair, setSelectedPair] = useState<TradingPair>('ETH/USDT');
   const [isPairSelectOpen, setIsPairSelectOpen] = useState(false);
+  const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
+  const [pendingOrder, setPendingOrder] = useState<{
+    size: string;
+    price: string;
+    type: 'limit' | 'market';
+    action: 'buy' | 'sell';
+  } | null>(null);
 
-  const [orderBook, setOrderBook] = useState<OrderBook>({
-    asks: mockOrderBook.asks.map(ask => ({
-      id: Math.random().toString(36).substring(2, 15),
-      ...ask,
-      type: 'sell' as const,
-      timestamp: Date.now()
-    })),
-    bids: mockOrderBook.bids.map(bid => ({
-      id: Math.random().toString(36).substring(2, 15),
-      ...bid,
-      type: 'buy' as const,
-      timestamp: Date.now()
-    }))
+  // Add this with other state declarations
+  const [selectedTimeframe, setSelectedTimeframe] = useState<TimeframeOption>(TIMEFRAME_OPTIONS[2]); // Default to 5m
+
+  const [orderBook, setOrderBook] = useState<OrderBook>(() => {
+    const mockData = generateMockOrderBook(selectedPair);
+    return {
+      asks: mockData.asks.map(ask => ({
+        id: Math.random().toString(36).substring(2, 15),
+        ...ask,
+        type: 'sell' as const,
+        timestamp: Date.now()
+      })),
+      bids: mockData.bids.map(bid => ({
+        id: Math.random().toString(36).substring(2, 15),
+        ...bid,
+        type: 'buy' as const,
+        timestamp: Date.now()
+      }))
+    };
   });
   
-  const [trades, setTrades] = useState<Trade[]>(mockTrades.map(trade => ({
-    ...trade,
-    type: Math.random() > 0.5 ? 'buy' : 'sell',
-    timestamp: Date.now()
-  })));
+  const [trades, setTrades] = useState<Trade[]>(() => 
+    FIXED_TRADES[selectedPair].sort((a, b) => a.timestamp - b.timestamp)
+  );
+  const [displayTrades, setDisplayTrades] = useState<Trade[]>(() => 
+    [...FIXED_TRADES[selectedPair]].sort((a, b) => b.timestamp - a.timestamp).slice(0, 50)
+  );
 
   // Add new state for orders and history
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
@@ -152,7 +332,54 @@ function App() {
 
   const tradingService = useMemo(() => new TradingService(), []);
 
+  // Add effect to update data when pair changes
+  useEffect(() => {
+    const newMockData = generateMockOrderBook(selectedPair);
+    setOrderBook({
+      asks: newMockData.asks.map(ask => ({
+        id: Math.random().toString(36).substring(2, 15),
+        ...ask,
+        type: 'sell' as const,
+        timestamp: Date.now()
+      })),
+      bids: newMockData.bids.map(bid => ({
+        id: Math.random().toString(36).substring(2, 15),
+        ...bid,
+        type: 'buy' as const,
+        timestamp: Date.now()
+      }))
+    });
+    setTrades(FIXED_TRADES[selectedPair]);
+  }, [selectedPair]);
+
+  // Update the token display in the order form
+  const getCurrentPairTokens = useCallback(() => {
+    const [baseAsset, quoteAsset] = selectedPair.split('/');
+    return { baseAsset, quoteAsset };
+  }, [selectedPair]);
+
   const handlePlaceOrder = useCallback(() => {
+    if (!size) return;
+    
+    // Check if confirmation is disabled in localStorage
+    const hideConfirmation = localStorage.getItem('hideOrderConfirmation') === 'true';
+    
+    if (!hideConfirmation) {
+      setPendingOrder({
+        size,
+        price: price || 'Market',
+        type: orderType,
+        action: tradeType
+      });
+      setShowOrderConfirmation(true);
+      return;
+    }
+    
+    // Execute order logic here
+    executeOrder();
+  }, [price, size, tradeType, orderType]);
+
+  const executeOrder = useCallback(() => {
     if (!size) return;
 
     if (orderType === 'market') {
@@ -290,6 +517,8 @@ function App() {
     // Reset form
     setPrice('');
     setSize('');
+    setShowOrderConfirmation(false);
+    setPendingOrder(null);
   }, [price, size, tradeType, orderType, orderBook, tradingService]);
 
   // Update the cancel order function
@@ -312,6 +541,157 @@ function App() {
     });
   }, []);
 
+  // Add these near the top with other state declarations
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationInterval, setSimulationInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // Add these helper functions
+  const getRandomPrice = (basePrice: number, spread: number, pair: TradingPair) => {
+    if (pair === 'USDC/USDT') {
+      const stableSpread = 0.0002;
+      return 1 + (Math.random() * stableSpread - stableSpread/2);
+    }
+    
+    const variation = (Math.random() - 0.5) * 2 * spread;
+    return Number((basePrice + variation).toFixed(2));
+  };
+
+  // Add effect to update simulation when timeframe changes
+  useEffect(() => {
+    if (isSimulating) {
+      // Stop current simulation
+      if (simulationInterval) {
+        clearInterval(simulationInterval);
+      }
+      
+      // Restart simulation with new interval
+      simulateMarketActivity();
+      const interval = setInterval(simulateMarketActivity, 
+        Math.min(selectedTimeframe.minutes * 60 * 1000 / 5, 1000)
+      );
+      setSimulationInterval(interval);
+    }
+  }, [selectedTimeframe, isSimulating]); // Add cleanup to prevent memory leaks
+
+  // Update the simulation function to generate appropriate data for the timeframe
+  const simulateMarketActivity = () => {
+    // Generate fewer trades for smaller timeframes
+    const tradesPerUpdate = selectedTimeframe.minutes < 1 ? 1 : 
+                           selectedTimeframe.minutes < 5 ? 2 : 5;
+                         
+    for (let i = 0; i < tradesPerUpdate; i++) {
+      const currentPrice = trades[0]?.close || trades[0]?.price || PAIR_PRICE_RANGES[selectedPair].basePrice;
+      const isUp = Math.random() > 0.5;
+      const newPrice = getRandomPrice(currentPrice, currentPrice * 0.0005, selectedPair);
+      const quantity = 0.5 + Math.random() * 4.5;
+      
+      // Create timestamp with proper time progression
+      const timestamp = Date.now() + (i * 100); // Add small time offset for each trade
+      const timeStr = new Date(timestamp).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+
+      const trade = {
+        price: newPrice,
+        quantity: quantity,
+        timestamp,
+        time: timeStr,
+        type: isUp ? 'buy' as const : 'sell' as const,
+        open: currentPrice,
+        close: newPrice,
+        high: Math.max(currentPrice, newPrice),
+        low: Math.min(currentPrice, newPrice),
+        volume: quantity * newPrice
+      };
+
+      // Update trades for chart (ascending order)
+      setTrades(prev => {
+        const newTrades = [...prev, trade].slice(-1000); // Keep last 1000 trades
+        return newTrades.sort((a, b) => a.timestamp - b.timestamp); // Sort ascending for chart
+      });
+
+      // Update display trades (descending order)
+      setDisplayTrades(prev => {
+        const newTrades = [trade, ...prev].slice(0, 50); // Keep last 50 trades for display
+        return newTrades; // Already in descending order due to unshift
+      });
+
+      // Update order book
+      setOrderBook(prev => {
+        const spread = currentPrice * 0.0002; // 0.02% spread
+        const newAsks = [...prev.asks];
+        const newBids = [...prev.bids];
+
+        // Update asks
+        for (let i = 0; i < newAsks.length; i++) {
+          const randomChange = (Math.random() - 0.5) * spread;
+          const newSize = Math.max(0.1, newAsks[i].size + (Math.random() - 0.5) * 2);
+          newAsks[i] = {
+            ...newAsks[i],
+            price: newPrice + spread + randomChange + (i * spread),
+            size: newSize,
+            total: newSize * (newPrice + spread + randomChange + (i * spread)),
+            timestamp: Date.now(),
+            type: 'sell' as const
+          };
+        }
+
+        // Update bids
+        for (let i = 0; i < newBids.length; i++) {
+          const randomChange = (Math.random() - 0.5) * spread;
+          const newSize = Math.max(0.1, newBids[i].size + (Math.random() - 0.5) * 2);
+          newBids[i] = {
+            ...newBids[i],
+            price: newPrice - spread + randomChange - (i * spread),
+            size: newSize,
+            total: newSize * (newPrice - spread + randomChange - (i * spread)),
+            timestamp: Date.now(),
+            type: 'buy' as const
+          };
+        }
+
+        // Sort asks ascending and bids descending by price
+        newAsks.sort((a, b) => a.price - b.price);
+        newBids.sort((a, b) => b.price - a.price);
+
+        return {
+          asks: newAsks,
+          bids: newBids
+        };
+      });
+    }
+  };
+
+  const stopSimulation = () => {
+    setIsSimulating(false);
+    if (simulationInterval) {
+      clearInterval(simulationInterval);
+      setSimulationInterval(null);
+    }
+  };
+
+  // Add cleanup effect
+  useEffect(() => {
+    return () => {
+      if (simulationInterval) {
+        clearInterval(simulationInterval);
+      }
+    };
+  }, [simulationInterval]);
+
+  // Add this function back to App.tsx
+  const startSimulation = () => {
+    setIsSimulating(true);
+    simulateMarketActivity(); // Run once immediately
+    const interval = setInterval(simulateMarketActivity, 
+      Math.min(selectedTimeframe.minutes * 60 * 1000 / 5, 1000)
+    );
+    setSimulationInterval(interval);
+  };
+
   return (
     <div className="h-screen flex flex-col bg-fuel-dark-900 text-gray-100">
       {/* Header - Always visible */}
@@ -325,10 +705,9 @@ function App() {
             <div className="flex items-center space-x-2 sm:space-x-4">
               <button
                 className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors
-                  ${
-                    activeScreen === "terminal"
-                      ? "bg-fuel-dark-700 text-fuel-green"
-                      : "text-gray-400 hover:text-gray-300"
+                  ${activeScreen === "terminal"
+                    ? "bg-fuel-dark-700 text-fuel-green"
+                    : "text-gray-400 hover:text-gray-300"
                   }`}
                 onClick={() => setActiveScreen("terminal")}
               >
@@ -336,10 +715,9 @@ function App() {
               </button>
               <button
                 className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors
-                  ${
-                    activeScreen === "swap"
-                      ? "bg-fuel-dark-700 text-fuel-green"
-                      : "text-gray-400 hover:text-gray-300"
+                  ${activeScreen === "swap"
+                    ? "bg-fuel-dark-700 text-fuel-green"
+                    : "text-gray-400 hover:text-gray-300"
                   }`}
                 onClick={() => setActiveScreen("swap")}
               >
@@ -347,10 +725,9 @@ function App() {
               </button>
               <button
                 className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors
-                  ${
-                    activeScreen === "p2p"
-                      ? "bg-fuel-dark-700 text-fuel-green"
-                      : "text-gray-400 hover:text-gray-300"
+                  ${activeScreen === "p2p"
+                    ? "bg-fuel-dark-700 text-fuel-green"
+                    : "text-gray-400 hover:text-gray-300"
                   }`}
                 onClick={() => setActiveScreen("p2p")}
               >
@@ -358,7 +735,26 @@ function App() {
               </button>
             </div>
           </div>
-          <div className="flex items-center justify-end space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            {activeScreen === "terminal" && (
+              <div className="flex items-center space-x-2">
+                {isSimulating ? (
+                  <button
+                    onClick={stopSimulation}
+                    className="px-4 py-1.5 text-xs sm:text-sm font-medium rounded bg-red-500 text-white hover:bg-opacity-90 transition-colors"
+                  >
+                    Stop Simulation
+                  </button>
+                ) : (
+                  <button
+                    onClick={startSimulation}
+                    className="px-4 py-1.5 text-xs sm:text-sm font-medium rounded bg-fuel-green text-fuel-dark-900 hover:bg-opacity-90 transition-colors"
+                  >
+                    Start Simulation
+                  </button>
+                )}
+              </div>
+            )}
             <button
               className="px-3 sm:px-4 py-1.5 rounded bg-fuel-dark-700 text-gray-100 text-xs sm:text-sm hover:bg-fuel-dark-600"
               onClick={() => setIsDepositModalOpen(true)}
@@ -508,6 +904,8 @@ function App() {
                     <TradingViewWidget 
                       trades={trades} 
                       userTrades={userTrades}
+                      selectedTimeframe={selectedTimeframe}
+                      onTimeframeChange={setSelectedTimeframe} // Add this prop
                     />
                   </div>
                 )}
@@ -875,41 +1273,16 @@ function App() {
                           placeholder="0.00"
                           value={size}
                           onChange={(e) => setSize(e.target.value)}
+                          step={PAIR_PRICE_RANGES[selectedPair].minQty}
                         />
                         <div className="relative">
                           <button
-                            className="w-20 bg-fuel-dark-700 rounded p-1.5 text-xs text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
-                            onClick={() =>
-                              setIsTokenSelectOpen(!isTokenSelectOpen)
-                            }
+                            className="w-24 bg-fuel-dark-700 rounded p-2 text-sm text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
+                            onClick={() => setIsTokenSelectOpen(!isTokenSelectOpen)}
                           >
-                            <span>FUEL</span>
-                            <ChevronDown
-                              className={`h-3 w-3 text-gray-400 transition-transform ${
-                                isTokenSelectOpen ? "rotate-180" : ""
-                              }`}
-                            />
+                            <span>{getCurrentPairTokens().baseAsset}</span>
+                            <ChevronDown className="h-4 w-4" />
                           </button>
-                          {isTokenSelectOpen && (
-                            <div className="absolute top-full right-0 w-24 mt-1 bg-fuel-dark-700 rounded shadow-lg border border-fuel-dark-600 z-10">
-                              <button
-                                className="w-full p-2 text-sm text-left hover:bg-fuel-dark-600 transition-colors"
-                                onClick={() => {
-                                  setIsTokenSelectOpen(false);
-                                }}
-                              >
-                                FUEL
-                              </button>
-                              <button
-                                className="w-full p-2 text-sm text-left hover:bg-fuel-dark-600 transition-colors"
-                                onClick={() => {
-                                  setIsTokenSelectOpen(false);
-                                }}
-                              >
-                                USDC
-                              </button>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -947,6 +1320,8 @@ function App() {
                     <TradingViewWidget 
                       trades={trades} 
                       userTrades={userTrades}
+                      selectedTimeframe={selectedTimeframe}
+                      onTimeframeChange={setSelectedTimeframe} // Add this prop
                     />
                   </div>
 
@@ -997,9 +1372,7 @@ function App() {
                                   className="grid grid-cols-5 p-2 text-xs hover:bg-fuel-dark-700 group"
                                 >
                                   <div className="text-gray-400">
-                                    {new Date(
-                                      order.timestamp
-                                    ).toLocaleTimeString()}
+                                    {new Date(order.timestamp).toLocaleTimeString()}
                                   </div>
                                   <div>FUEL/USDT</div>
                                   <div
@@ -1025,9 +1398,7 @@ function App() {
                                     <span>{order.price.toFixed(5)}</span>
                                     <button
                                       className="px-2 py-0.5 text-[10px] text-gray-400 hover:text-gray-300 hover:bg-fuel-dark-600 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                      onClick={() =>
-                                        handleCancelOrder(order.id)
-                                      }
+                                      onClick={() => handleCancelOrder(order.id)}
                                     >
                                       Cancel
                                     </button>
@@ -1059,9 +1430,7 @@ function App() {
                                 className="grid grid-cols-5 p-2 text-xs hover:bg-fuel-dark-700"
                               >
                                 <div className="text-gray-400">
-                                  {new Date(
-                                    order.completedAt
-                                  ).toLocaleTimeString()}
+                                  {new Date(order.completedAt).toLocaleTimeString()}
                                 </div>
                                 <div>FUEL/USDT</div>
                                 <div
@@ -1073,7 +1442,7 @@ function App() {
                                 >
                                   <span>{order.type.toUpperCase()}</span>
                                   <span
-                                    className={`text-[10px] px-1.5 rounded ${
+                                    className={`text-[6px] md:text-[10px] px-1 md:px-1.5 rounded ${
                                       order.status === "filled"
                                         ? "bg-green-400/10 text-green-400"
                                         : "bg-gray-400/10 text-gray-400"
@@ -1102,24 +1471,22 @@ function App() {
                   {/* Order Book/Trades Toggle */}
                   <div className="flex border-b border-fuel-dark-600">
                     <button
-                      className={`flex-1 py-3 text-center text-sm font-medium transition-colors
-                        ${
-                          activeView === "orderbook"
-                            ? "text-fuel-green"
-                            : "text-gray-400"
-                        }`}
-                      onClick={() => setActiveView("orderbook")}
+                      className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                        activeView === 'orderbook'
+                          ? 'bg-fuel-dark-700 text-fuel-green'
+                          : 'text-gray-400 hover:text-gray-300'
+                      }`}
+                      onClick={() => setActiveView('orderbook')}
                     >
                       Order Book
                     </button>
                     <button
-                      className={`flex-1 py-3 text-center text-sm font-medium transition-colors
-                        ${
-                          activeView === "trades"
-                            ? "text-fuel-green"
-                            : "text-gray-400"
-                        }`}
-                      onClick={() => setActiveView("trades")}
+                      className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                        activeView === 'trades'
+                          ? 'bg-fuel-dark-700 text-fuel-green'
+                          : 'text-gray-400 hover:text-gray-300'
+                      }`}
+                      onClick={() => setActiveView('trades')}
                     >
                       Trades
                     </button>
@@ -1127,127 +1494,130 @@ function App() {
 
                   {/* Order Book/Trades Content */}
                   <div className="flex-1 overflow-auto">
-                    {activeView === "orderbook" ? (
-                      // Orderbook content
-                      <div className="p-2">
-                        <div className="text-[10px] sm:text-xs grid grid-cols-3 text-gray-400 mb-2">
-                          <span>Price USDC</span>
-                          <span className="text-right">Amount FUEL</span>
-                          <span className="text-right">Total</span>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto h-[200px] sm:h-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
-                          {/* Asks */}
-                          <div className="space-y-0.5 mb-2">
-                            {orderBook.asks.map((order, i) => (
-                              <div
-                                key={i}
-                                className="grid grid-cols-3 text-[10px] sm:text-xs relative overflow-hidden"
-                              >
-                                <div
-                                  className="absolute inset-0 bg-red-500/10"
-                                  style={{
-                                    width: `${(order.total / 16.4) * 100}%`,
-                                  }}
-                                ></div>
-                                <span className="relative z-10 text-red-400">
-                                  {order.price.toFixed(5)}
-                                </span>
-                                <span className="relative z-10 text-right">
-                                  {order.size.toFixed(3)}
-                                </span>
-                                <span className="relative z-10 text-right text-gray-500">
-                                  {order.total.toFixed(5)}
-                                </span>
-                              </div>
-                            ))}
+                    {activeView === 'orderbook' ? (
+                      // Order book content
+                      <div className="h-full flex flex-col">
+                        <div className="p-2">
+                          <div className="text-[10px] sm:text-xs grid grid-cols-3 text-gray-400 mb-2">
+                            <span>Price USDC</span>
+                            <span className="text-right">Amount FUEL</span>
+                            <span className="text-right">Total</span>
                           </div>
 
-                          {/* Current Price */}
-                          <div className="text-center py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700">
-                            <div className="text-fuel-green text-xs sm:text-sm font-medium">
-                              {
-                                calculateSpread(orderBook.asks, orderBook.bids)
-                                  .avgPrice
-                              }{" "}
-                              USDC
-                            </div>
-                            <div className="text-[10px] sm:text-xs text-gray-400">
-                              Spread:{" "}
-                              {
-                                calculateSpread(orderBook.asks, orderBook.bids)
-                                  .spread
-                              }{" "}
-                              (
-                              {
-                                calculateSpread(orderBook.asks, orderBook.bids)
-                                  .spreadPercentage
-                              }
-                              %)
-                            </div>
-                          </div>
-
-                          {/* Bids */}
-                          <div className="space-y-0.5 mt-2">
-                            {orderBook.bids.map((order, i) => (
-                              <div
-                                key={i}
-                                className="grid grid-cols-3 text-[10px] sm:text-xs relative overflow-hidden"
-                              >
+                          <div className="flex-1 overflow-y-auto h-[200px] sm:h-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
+                            {/* Asks */}
+                            <div className="space-y-0.5 mb-2">
+                              {orderBook.asks.map((order, i) => (
                                 <div
-                                  className="absolute inset-0 bg-green-900/20"
-                                  style={{
-                                    width: `${(order.total / 948.1) * 100}%`,
-                                  }}
-                                ></div>
-                                <span className="relative z-10 text-green-400">
-                                  {order.price.toFixed(5)}
-                                </span>
-                                <span className="relative z-10 text-right">
-                                  {order.size.toFixed(3)}
-                                </span>
-                                <span className="relative z-10 text-right text-gray-500">
-                                  {order.total.toFixed(5)}
-                                </span>
+                                  key={i}
+                                  className="grid grid-cols-3 text-[10px] sm:text-xs relative overflow-hidden"
+                                >
+                                  <div
+                                    className="absolute inset-0 bg-red-500/10"
+                                    style={{
+                                      width: `${(order.total / 16.4) * 100}%`,
+                                    }}
+                                  ></div>
+                                  <span className="relative z-10 text-red-400">
+                                    {order.price.toFixed(5)}
+                                  </span>
+                                  <span className="relative z-10 text-right">
+                                    {order.size.toFixed(3)}
+                                  </span>
+                                  <span className="relative z-10 text-right text-gray-500">
+                                    {order.total.toFixed(5)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Current Price */}
+                            <div className="text-center py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700">
+                              <div className="text-fuel-green text-xs sm:text-sm font-medium">
+                                {
+                                  calculateSpread(orderBook.asks, orderBook.bids)
+                                    .avgPrice
+                                }{" "}
+                                USDC
                               </div>
-                            ))}
+                              <div className="text-[10px] sm:text-xs text-gray-400">
+                                Spread:{" "}
+                                {
+                                  calculateSpread(orderBook.asks, orderBook.bids)
+                                    .spread
+                                }{" "}
+                                (
+                                {
+                                  calculateSpread(orderBook.asks, orderBook.bids)
+                                    .spreadPercentage
+                                }
+                                %)
+                              </div>
+                            </div>
+
+                            {/* Bids */}
+                            <div className="space-y-0.5 mt-2">
+                              {orderBook.bids.map((order, i) => (
+                                <div
+                                  key={i}
+                                  className="grid grid-cols-3 text-[10px] sm:text-xs relative overflow-hidden"
+                                >
+                                  <div
+                                    className="absolute inset-0 bg-green-900/20"
+                                    style={{
+                                      width: `${(order.total / 948.1) * 100}%`,
+                                    }}
+                                  ></div>
+                                  <span className="relative z-10 text-green-400">
+                                    {order.price.toFixed(5)}
+                                  </span>
+                                  <span className="relative z-10 text-right">
+                                    {order.size.toFixed(3)}
+                                  </span>
+                                  <span className="relative z-10 text-right text-gray-500">
+                                    {order.total.toFixed(5)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
                     ) : (
                       // Trades content
-                      <div className="p-2">
-                        <div className="text-[10px] sm:text-xs grid grid-cols-3 text-gray-400 mb-2">
-                          <span>Price</span>
-                          <span className="text-right">Qty</span>
-                          <span className="text-right">Time</span>
-                        </div>
+                      <div className="h-full">
+                        <div className="p-2">
+                          <div className="text-[10px] sm:text-xs grid grid-cols-4 text-gray-400 mb-2">
+                            <span>Time</span>
+                            <span>Price</span>
+                            <span className="text-right">Amount</span>
+                            <span className="text-right">Total</span>
+                          </div>
 
-                        <div className="flex-1 overflow-y-auto h-[200px] sm:h-auto custom-scrollbar">
-                          <div className="space-y-0.5">
-                            {trades.map((trade, i) => (
-                              <div
-                                key={i}
-                                className="grid grid-cols-3 text-[10px] sm:text-xs"
-                              >
-                                <span
-                                  className={`font-mono ${
-                                    trade.price >=
-                                    (trades[i + 1]?.price ?? trade.price)
-                                      ? "text-green-400"
-                                      : "text-red-400"
-                                  }`}
+                          <div className="flex-1 overflow-y-auto h-[calc(100vh-400px)] scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
+                            <div className="space-y-0.5">
+                              {displayTrades.map((trade) => (
+                                <div
+                                  key={trade.timestamp}
+                                  className="grid grid-cols-4 text-[10px] sm:text-xs items-center hover:bg-fuel-dark-700/50 rounded p-1.5"
                                 >
-                                  {trade.price.toFixed(5)}
-                                </span>
-                                <span className="text-right font-mono">
-                                  {trade.quantity.toFixed(4)}
-                                </span>
-                                <span className="text-right text-gray-500 font-mono">
-                                  {trade.time}
-                                </span>
-                              </div>
-                            ))}
+                                  <span className="text-gray-400 font-mono">
+                                    {trade.time}
+                                  </span>
+                                  <span className={`font-mono ${
+                                    trade.type === 'buy' ? 'text-green-400' : 'text-red-400'
+                                  }`}>
+                                    {(trade.price || trade.close || 0).toFixed(selectedPair === 'USDC/USDT' ? 4 : 2)}
+                                  </span>
+                                  <span className="text-right font-mono">
+                                    {trade.quantity.toFixed(4)}
+                                  </span>
+                                  <span className="text-right font-mono text-gray-400">
+                                    {(trade.quantity * (trade.price || trade.close)).toFixed(2)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1348,41 +1718,16 @@ function App() {
                             placeholder="0.00"
                             value={size}
                             onChange={(e) => setSize(e.target.value)}
+                            step={PAIR_PRICE_RANGES[selectedPair].minQty}
                           />
                           <div className="relative">
                             <button
                               className="w-24 bg-fuel-dark-700 rounded p-2 text-sm text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
-                              onClick={() =>
-                                setIsTokenSelectOpen(!isTokenSelectOpen)
-                              }
+                              onClick={() => setIsTokenSelectOpen(!isTokenSelectOpen)}
                             >
-                              <span>FUEL</span>
-                              <ChevronDown
-                                className={`h-4 w-4 text-gray-400 transition-transform ${
-                                  isTokenSelectOpen ? "rotate-180" : ""
-                                }`}
-                              />
+                              <span>{getCurrentPairTokens().baseAsset}</span>
+                              <ChevronDown className="h-4 w-4" />
                             </button>
-                            {isTokenSelectOpen && (
-                              <div className="absolute top-full right-0 w-24 mt-1 bg-fuel-dark-700 rounded shadow-lg border border-fuel-dark-600 z-10">
-                                <button
-                                  className="w-full p-2 text-sm text-left hover:bg-fuel-dark-600 transition-colors"
-                                  onClick={() => {
-                                    setIsTokenSelectOpen(false);
-                                  }}
-                                >
-                                  FUEL
-                                </button>
-                                <button
-                                  className="w-full p-2 text-sm text-left hover:bg-fuel-dark-600 transition-colors"
-                                  onClick={() => {
-                                    setIsTokenSelectOpen(false);
-                                  }}
-                                >
-                                  USDC
-                                </button>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -1426,6 +1771,23 @@ function App() {
         isOpen={isDepositModalOpen}
         onClose={() => setIsDepositModalOpen(false)}
       />
+
+      {pendingOrder && (
+        <OrderConfirmationModal
+          isOpen={showOrderConfirmation}
+          onClose={() => {
+            setShowOrderConfirmation(false);
+            setPendingOrder(null);
+          }}
+          onConfirm={executeOrder}
+          orderDetails={{
+            action: pendingOrder.action,
+            size: pendingOrder.size,
+            price: pendingOrder.price,
+            type: pendingOrder.type
+          }}
+        />
+      )}
     </div>
   );
 }
