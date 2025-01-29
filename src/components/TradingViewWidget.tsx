@@ -99,6 +99,7 @@ function TradingViewWidget({
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candlestickSeriesRef = useRef<any>(null);
+  const volumeSeriesRef = useRef<any>(null);
 
   // Initialize chart
   useEffect(() => {
@@ -135,19 +136,31 @@ function TradingViewWidget({
         minBarSpacing: 2
       },
       rightPriceScale: {
-        borderColor: '#1e222d',
-        autoScale: true,
         scaleMargins: {
           top: 0.1,
           bottom: 0.2,
         },
-        entireTextOnly: true,
       },
       handleScale: {
         axisPressedMouseMove: true
       },
       handleScroll: {
         vertTouchDrag: true
+      },
+      crosshair: {
+        mode: 1,
+        vertLine: {
+          color: '#555',
+          width: 1,
+          style: 3,
+          labelBackgroundColor: '#1e222d',
+        },
+        horzLine: {
+          color: '#555',
+          width: 1,
+          style: 3,
+          labelBackgroundColor: '#1e222d',
+        },
       }
     });
 
@@ -170,23 +183,29 @@ function TradingViewWidget({
       color: '#26a69a',
       priceFormat: {
         type: 'volume',
+        precision: 0,
       },
-      priceScaleId: 'volume',
+      priceScaleId: '',
+      overlay: true,
       scaleMargins: {
-        top: 0.8,
+        top: 0.7,
         bottom: 0,
       },
-      priceScale: {
-        scaleMargins: {
-          top: 0.8,
-          bottom: 0,
-        },
-        visible: true,
-      }
     });
 
     chartRef.current = chart;
     candlestickSeriesRef.current = candlestickSeries;
+    volumeSeriesRef.current = volumeSeries;
+
+    // Configure the volume price scale
+    chart.priceScale('').applyOptions({
+      scaleMargins: {
+        top: 0.7,
+        bottom: 0,
+      },
+      visible: true,
+      autoScale: true,
+    });
 
     window.addEventListener('resize', handleResize);
 
@@ -214,7 +233,7 @@ function TradingViewWidget({
 
   // Update data when trades or timeframe changes
   useEffect(() => {
-    if (!chartRef.current || !candlestickSeriesRef.current) return;
+    if (!chartRef.current || !candlestickSeriesRef.current || !volumeSeriesRef.current) return;
 
     try {
       const candleData = convertToOHLC(trades, selectedTimeframe.minutes);
@@ -225,15 +244,27 @@ function TradingViewWidget({
       candlestickSeriesRef.current.setData(candleData);
 
       // Update volume series
-      const volumeSeries = chartRef.current.getAllSeries()[1] as any;
-      if (volumeSeries) {
-        const volumeData = candleData.map(candle => ({
-          time: candle.time,
-          value: candle.volume,
-          color: candle.close > candle.open ? 'rgba(38, 166, 154, 0.3)' : 'rgba(239, 83, 80, 0.3)'
-        }));
-        volumeSeries.setData(volumeData);
-      }
+      const volumeData = candleData.map(candle => ({
+        time: candle.time,
+        value: candle.volume || 0,
+        color: candle.close >= candle.open 
+          ? 'rgba(38, 166, 154, 0.5)'  // Green for bullish
+          : 'rgba(239, 83, 80, 0.5)'   // Red for bearish
+      }));
+      
+      volumeSeriesRef.current.setData(volumeData);
+
+      // Format volume numbers
+      chart.priceScale('').applyOptions({
+        formatPrice: (price: number) => {
+          if (price >= 1000000) {
+            return (price / 1000000).toFixed(2) + 'M';
+          } else if (price >= 1000) {
+            return (price / 1000).toFixed(2) + 'K';
+          }
+          return price.toFixed(0);
+        },
+      });
 
       // Adjust the visible range based on timeframe
       const timeScale = chartRef.current.timeScale();

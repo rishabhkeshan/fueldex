@@ -5,6 +5,18 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
-    exclude: ['lucide-react'],
+    exclude: ["lucide-react"],
   },
+  root: "./",
+  build: {
+    outDir: "dist",
+  },
+  publicDir: "public",
+  // server: {
+  //   port: 5173,
+  //   fs: {
+  //     strict: false,
+  //     allow: [".."],
+  //   },
+  // },
 });
