@@ -54,7 +54,10 @@ const FIXED_ORDERBOOKS = {
       { price: 3320.50, size: 1.250, total: 4150.625 },
       { price: 3319.75, size: 2.950, total: 9793.263 },
       { price: 3319.50, size: 1.550, total: 5144.725 },
-      { price: 3319.25, size: 2.250, total: 7468.313 }
+      { price: 3329.50, size: 1.693, total: 5849.425 },
+      { price: 3321.30, size: 0.850, total: 2144.725 },
+      { price: 3322.10, size: 1.550, total: 5269.123 },
+      { price: 3319.35, size: 2.250, total: 7468.313 }
     ],
     bids: [
       { price: 3319.25, size: 2.450, total: 8132.163 },
@@ -67,6 +70,9 @@ const FIXED_ORDERBOOKS = {
       { price: 3314.75, size: 2.850, total: 9447.038 },
       { price: 3314.25, size: 1.350, total: 4474.238 },
       { price: 3313.75, size: 2.450, total: 8118.688 },
+      { price: 3312.75, size: 2.850, total: 9447.038 },
+      { price: 3311.25, size: 1.350, total: 4474.238 },
+      { price: 3310.75, size: 2.450, total: 8118.688 },
       { price: 3313.25, size: 1.950, total: 6460.838 }
     ]
   },
@@ -342,15 +348,21 @@ const calculatePriceStats = (trades: Trade[]) => {
   if (!trades.length) return { last: 0, high: 0, low: 0, volume: 0, change: 0 };
 
   const last24h = trades.filter(t => t.timestamp > Date.now() - 24 * 60 * 60 * 1000);
+  if (!last24h.length) return { last: 0, high: 0, low: 0, volume: 0, change: 0 };
+
   const prices = last24h.map(t => t.price || t.close || 0);
   const volumes = last24h.map(t => t.quantity);
 
+  const lastPrice = prices[0];
+  const openPrice = prices[prices.length - 1];
+  const priceChange = ((lastPrice - openPrice) / openPrice) * 100;
+
   return {
-    last: prices[0] || 0,
+    last: lastPrice,
     high: Math.max(...prices),
     low: Math.min(...prices),
     volume: volumes.reduce((a, b) => a + b, 0),
-    change: ((prices[0] - prices[prices.length - 1]) / prices[prices.length - 1]) * 100
+    change: priceChange
   };
 };
 
@@ -424,12 +436,28 @@ function App() {
   const [historicalTrades, setHistoricalTrades] = useState<Trade[]>([]);
 
   // First add the priceStats state
-  const [priceStats, setPriceStats] = useState(() => calculatePriceStats(trades));
+  const [priceStats, setPriceStats] = useState<Record<TradingPair, {
+    last: number;
+    high: number;
+    low: number;
+    volume: number;
+    change: number;
+  }>>(() => {
+    const stats: Record<TradingPair, any> = {};
+    TRADING_PAIRS.forEach(pair => {
+      stats[pair as TradingPair] = calculatePriceStats(tradeData[pair as keyof typeof tradeData] || []);
+    });
+    return stats;
+  });
 
-  // Add useEffect to update stats when trades change
+  // Update the useEffect for price stats to handle all pairs
   useEffect(() => {
-    setPriceStats(calculatePriceStats(trades));
-  }, [trades]);
+    const newStats: Record<TradingPair, any> = {};
+    TRADING_PAIRS.forEach(pair => {
+      newStats[pair as TradingPair] = calculatePriceStats(tradeData[pair as keyof typeof tradeData] || []);
+    });
+    setPriceStats(newStats);
+  }, [tradeData]);
 
   // Fetch historical data on component mount
   useEffect(() => {
@@ -483,11 +511,19 @@ function App() {
     initializeTradeData();
   }, [selectedPair]); // Add selectedPair as dependency
 
-  // Update trades and displayTrades when selectedPair or tradeData changes
+  // Add this effect to update trades and stats when pair changes
   useEffect(() => {
-    if (tradeData[selectedPair]?.length > 0) {
-      setTrades(tradeData[selectedPair].sort((a, b) => a.timestamp - b.timestamp));
-      setDisplayTrades([...tradeData[selectedPair]].sort((a, b) => b.timestamp - a.timestamp).slice(0, 50));
+    if (tradeData[selectedPair]) {
+      const pairTrades = tradeData[selectedPair];
+      setTrades(pairTrades.sort((a, b) => a.timestamp - b.timestamp));
+      setDisplayTrades([...pairTrades].sort((a, b) => b.timestamp - a.timestamp).slice(0, 50));
+      setHistoricalTrades(pairTrades);
+      
+      // Update price stats for the new pair
+      setPriceStats(prevStats => ({
+        ...prevStats,
+        [selectedPair]: calculatePriceStats(pairTrades)
+      }));
     }
   }, [selectedPair, tradeData]);
 
@@ -856,6 +892,12 @@ function App() {
         index === self.findIndex(t => t.timestamp === trade.timestamp)
       );
       
+      // Update price stats for the current pair
+      setPriceStats(prevStats => ({
+        ...prevStats,
+        [selectedPair]: calculatePriceStats(uniqueTrades)
+      }));
+      
       return uniqueTrades;
     });
 
@@ -951,14 +993,17 @@ function App() {
     }
   }, [isSimulating, historicalTrades]);
 
+  // Add these new state variables near the top with other state declarations
+  const [searchQuery, setSearchQuery] = useState('');
+
   return (
     <div className="h-screen flex flex-col bg-fuel-dark-900 text-gray-100">
       {/* Header - Always visible */}
       <header className="border-b border-fuel-dark-600 bg-fuel-dark-800 py-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 space-y-2 sm:space-y-0">
           <div className="flex items-center justify-between sm:space-x-8">
-            <div className="flex items-center space-x-2">
-              <img src={FuelLogo} alt="FUEL Logo" className="w-5 sm:w-7 h-7" />
+            <div className="flex items-center space-x-1">
+              <img src={FuelLogo} alt="FUEL Logo" className="w-5 h-5 sm:w-7 sm:h-7 mt-1.5" />
               <span className="text-base sm:text-lg font-bold">FUEL DEX</span>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
@@ -1003,16 +1048,17 @@ function App() {
                 {isSimulating ? (
                   <button
                     onClick={stopSimulation}
-                    className="px-4 py-1.5 text-xs sm:text-sm font-medium rounded bg-red-500 text-white hover:bg-opacity-90 transition-colors outline-none"
+                    className="flex items-center space-x-1.5 px-3 py-1.5 text-xs sm:text-xs font-medium rounded bg-red-500/20 text-red-500 hover:bg-red-500/30 transition-colors outline-none border border-red-500/30"
                   >
-                    Stop Simulation
+                    <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                    <span>Stop Simulation</span>
                   </button>
                 ) : (
                   <button
                     onClick={startSimulation}
-                    className="px-4 py-1.5 text-xs sm:text-sm font-medium rounded bg-fuel-green text-fuel-dark-900 hover:bg-opacity-90 transition-colors outline-none"
+                    className="flex items-center space-x-1.5 px-3 py-1.5 text-xs sm:text-xs font-medium rounded bg-fuel-green/10 text-fuel-green hover:bg-fuel-green/20 transition-colors outline-none border border-fuel-green/30"
                   >
-                    Start Simulation
+                    <span>Start Simulation</span>
                   </button>
                 )}
               </div>
@@ -1028,117 +1074,7 @@ function App() {
         </div>
       </header>
 
-      {/* Trading Pair Info - Only visible in terminal */}
-      {activeScreen === "terminal" && (
-        <div className="bg-fuel-dark-800 px-4 py-2 border-b border-fuel-dark-600">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div className="flex items-center justify-between sm:justify-start">
-              <div className="flex items-center justify-between sm:justify-start">
-                <div className="relative">
-                  <button
-                    className="flex items-center space-x-2 text-lg font-bold hover:bg-fuel-dark-700 rounded px-2 py-1 outline-none"
-                    onClick={() => setIsPairSelectOpen(!isPairSelectOpen)}
-                  >
-                    <div className="flex items-center">
-                      <div className="flex -space-x-2 mr-2">
-                        <img
-                          src={getTokenIcon(selectedPair.split("/")[0])}
-                          className="w-6 h-6 rounded-full ring-2 ring-fuel-dark-900"
-                          alt={selectedPair.split("/")[0]}
-                        />
-                        <img
-                          src={getTokenIcon(selectedPair.split("/")[1])}
-                          className="w-6 h-6 rounded-full ring-2 ring-fuel-dark-900 relative z-10"
-                          alt={selectedPair.split("/")[1]}
-                        />
-                      </div>
-                      <span>{selectedPair}</span>
-                    </div>
-                    <ChevronDown
-                      className={`w-5 h-5 transition-transform ${
-                        isPairSelectOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
 
-                  {isPairSelectOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-48 bg-fuel-dark-800 rounded shadow-lg border border-fuel-dark-600 z-50">
-                      {TRADING_PAIRS.map((pair) => {
-                        const [base, quote] = pair.split("/");
-                        return (
-                          <button
-                            key={pair}
-                            className="w-full px-4 py-2 text-left hover:bg-fuel-dark-700 transition-colors flex items-center space-x-2 outline-none"
-                            onClick={() => {
-                              setSelectedPair(pair);
-                              setIsPairSelectOpen(false);
-                            }}
-                          >
-                            <div className="flex -space-x-2">
-                              <img
-                                src={getTokenIcon(base)}
-                                className="w-5 h-5 rounded-full ring-2 ring-fuel-dark-800"
-                                alt={base}
-                              />
-                              <img
-                                src={getTokenIcon(quote)}
-                                className="w-5 h-5 rounded-full ring-2 ring-fuel-dark-800 relative z-10"
-                                alt={quote}
-                              />
-                            </div>
-                            <span>{pair}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <span
-                className={`ml-2 ${
-                  priceStats.change >= 0 ? "text-fuel-green" : "text-red-400"
-                }`}
-              >
-                ${priceStats.last.toFixed(2)}
-              </span>
-            </div>
-
-            {/* Stats - Grid on mobile, flex on desktop */}
-            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:space-x-6 text-[10px] sm:text-xs">
-              <div className="text-gray-400">
-                24h Change
-                <span
-                  className={`ml-2 ${
-                    priceStats.change >= 0 ? "text-fuel-green" : "text-red-400"
-                  }`}
-                >
-                  {priceStats.change > 0 ? "+" : ""}
-                  {priceStats.change.toFixed(2)}%
-                </span>
-              </div>
-              <div className="text-gray-400">
-                24h High
-                <span className="ml-2 text-gray-100">
-                  ${priceStats.high.toFixed(2)}
-                </span>
-              </div>
-              <div className="text-gray-400">
-                24h Low
-                <span className="ml-2 text-gray-100">
-                  ${priceStats.low.toFixed(2)}
-                </span>
-              </div>
-              <div className="text-gray-400">
-                24h Volume
-                <span className="ml-2 text-gray-100">
-                  {priceStats.volume.toFixed(2)}{" "}
-                  {getCurrentPairTokens().baseAsset}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Mobile Navigation Tabs */}
       {activeScreen === "terminal" && (
@@ -1330,17 +1266,27 @@ function App() {
                 <div className="flex border-b border-fuel-dark-600">
                   <button
                     className={`flex-1 py-2 text-center text-sm font-medium transition-colors outline-none
-                      ${mobileBottomView === "orders" ? "text-fuel-green" : "text-gray-400"}`}
+                      ${
+                        mobileBottomView === "orders"
+                          ? "text-fuel-green"
+                          : "text-gray-400"
+                      }`}
                     onClick={() => setMobileBottomView("orders")}
                   >
-                    Orders{activeOrders.length > 0 ? ` (${activeOrders.length})` : ''}
+                    Orders
+                    {activeOrders.length > 0 ? ` (${activeOrders.length})` : ""}
                   </button>
                   <button
                     className={`flex-1 py-2 text-center text-sm font-medium transition-colors outline-none
-                      ${mobileBottomView === "history" ? "text-fuel-green" : "text-gray-400"}`}
+                      ${
+                        mobileBottomView === "history"
+                          ? "text-fuel-green"
+                          : "text-gray-400"
+                      }`}
                     onClick={() => setMobileBottomView("history")}
                   >
-                    History{orderHistory.length > 0 ? ` (${orderHistory.length})` : ''}
+                    History
+                    {orderHistory.length > 0 ? ` (${orderHistory.length})` : ""}
                   </button>
                 </div>
 
@@ -1603,17 +1549,183 @@ function App() {
             {/* Desktop View - Hide on mobile */}
             <div className="hidden sm:flex flex-1 min-h-0">
               {/* Left section containing Chart, Orderbook/Trades, and Orders/History */}
-              <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex-1 flex flex-col">
                 {/* Top section with Chart and Orderbook/Trades */}
-                <div className="flex flex-1 min-h-0">
+                <div className="flex flex-1 overflow-hidden"> {/* Add overflow-hidden */}
                   {/* Chart */}
-                  <div className="flex-1 bg-fuel-dark-800 border-r border-fuel-dark-600">
-                    <TradingViewWidget
-                      trades={trades}
-                      userTrades={userTrades}
-                      selectedTimeframe={selectedTimeframe}
-                      onTimeframeChange={setSelectedTimeframe}
-                    />
+                  <div className="flex-1 bg-fuel-dark-800 border-r border-fuel-dark-600 flex flex-col overflow-hidden"> {/* Add flex flex-col overflow-hidden */}
+                    {/* Add trading pair header */}
+                    <div className="shrink-0 p-3 border-b border-fuel-dark-600"> {/* Add shrink-0 */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center justify-between sm:justify-start">
+                            <div className="relative">
+                              <button
+                                className="flex items-center space-x-2 text-lg font-bold hover:bg-fuel-dark-700 rounded px-3 py-2 outline-none min-w-[200px]"
+                                onClick={() => setIsPairSelectOpen(!isPairSelectOpen)}
+                              >
+                                <div className="flex items-center">
+                                  <div className="flex -space-x-2 mr-2">
+                                    <img
+                                      src={getTokenIcon(selectedPair.split("/")[0])}
+                                      className="w-6 h-6 rounded-full ring-2 ring-fuel-dark-900"
+                                      alt={selectedPair.split("/")[0]}
+                                    />
+                                    <img
+                                      src={getTokenIcon(selectedPair.split("/")[1])}
+                                      className="w-6 h-6 rounded-full ring-2 ring-fuel-dark-900 relative z-10"
+                                      alt={selectedPair.split("/")[1]}
+                                    />
+                                  </div>
+                                  <span>{selectedPair}</span>
+                                </div>
+                                <ChevronDown
+                                  className={`w-5 h-5 transition-transform ${
+                                    isPairSelectOpen ? "rotate-180" : ""
+                                  }`}
+                                />
+                              </button>
+
+                              {isPairSelectOpen && (
+                                <div className="absolute top-full left-0 mt-1 w-[570px] bg-fuel-dark-800 rounded-lg shadow-lg border border-fuel-dark-600 z-50">
+                                  {/* Search input */}
+                                  <div className="p-3 border-b border-fuel-dark-600">
+                                    <input
+                                      type="text"
+                                      placeholder="Search pairs..."
+                                      className="w-full bg-fuel-dark-700 rounded p-2 text-sm outline-none focus:ring-1 focus:ring-fuel-green"
+                                      value={searchQuery}
+                                      onChange={(e) => setSearchQuery(e.target.value)}
+                                    />
+                                  </div>
+
+                                  {/* Table Header */}
+                                  <div className="grid grid-cols-6 gap-4 px-4 py-2 border-b border-fuel-dark-600 text-[11px] text-gray-400">
+                                    <div className="col-span-2">Asset Pair</div>
+                                    <div className="text-right">Price</div>
+                                    <div className="text-right">24h Change</div>
+                                    <div className="text-right">24h High/Low</div>
+                                    <div className="text-right">24h Volume</div>
+                                  </div>
+
+                                  {/* Market pairs list */}
+                                  <div className="max-h-[300px] overflow-y-auto">
+                                    {TRADING_PAIRS.filter(pair => 
+                                      pair.toLowerCase().includes(searchQuery.toLowerCase())
+                                    ).map((pair) => {
+                                      const [base, quote] = pair.split("/");
+                                      const stats = priceStats[pair as keyof typeof priceStats];
+                                      
+                                      return (
+                                        <button
+                                          key={pair}
+                                          className="w-full px-4 py-2.5 text-left hover:bg-fuel-dark-700 transition-colors outline-none border-b border-fuel-dark-600 last:border-b-0"
+                                          onClick={() => {
+                                            setSelectedPair(pair);
+                                            setIsPairSelectOpen(false);
+                                            setSearchQuery('');
+                                          }}
+                                        >
+                                          <div className="grid grid-cols-6 gap-4 items-center">
+                                            {/* Asset Pair */}
+                                            <div className="flex items-center space-x-3 col-span-2">
+                                              <div className="flex -space-x-2">
+                                                <img
+                                                  src={getTokenIcon(base)}
+                                                  className="w-5 h-5 rounded-full ring-2 ring-fuel-dark-800"
+                                                  alt={base}
+                                                />
+                                                <img
+                                                  src={getTokenIcon(quote)}
+                                                  className="w-5 h-5 rounded-full ring-2 ring-fuel-dark-800 relative z-10"
+                                                  alt={quote}
+                                                />
+                                              </div>
+                                              <div>
+                                                <div className="font-medium text-sm">{pair}</div>
+                                              </div>
+                                            </div>
+
+                                            {/* Price */}
+                                            <div className="text-right text-[11px]">
+                                              ${stats?.last.toFixed(2)}
+                                            </div>
+
+                                            {/* 24h Change */}
+                                            <div className={`text-right text-[11px] ${stats?.change >= 0 ? 'text-fuel-green' : 'text-red-400'}`}>
+                                              {stats?.change >= 0 ? '+' : ''}{stats?.change.toFixed(2)}%
+                                            </div>
+
+                                            {/* 24h High/Low Combined */}
+                                            <div className="text-right text-[11px] text-gray-200">
+                                              <div>${stats?.high.toFixed(2)}</div>
+                                              <div className="text-gray-400">${stats?.low.toFixed(2)}</div>
+                                            </div>
+
+                                            {/* 24h Volume */}
+                                            <div className="text-right text-[11px] text-gray-200">
+                                              {(stats?.volume || 0).toLocaleString(undefined, {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2
+                                              })} {base}
+                                            </div>
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-lg font-bold">
+                              ${priceStats[selectedPair]?.last.toFixed(2)}
+                            </div>
+                            <div
+                              className={`text-xs ${
+                                priceStats[selectedPair]?.change >= 0
+                                  ? "text-fuel-green"
+                                  : "text-red-400"
+                              }`}
+                            >
+                              {priceStats[selectedPair]?.change >= 0 ? "+" : ""}
+                              {priceStats[selectedPair]?.change.toFixed(2)}%
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4 text-right">
+                          <div>
+                            <div className="text-xs text-gray-400">24h High</div>
+                            <div className="text-sm">
+                              ${priceStats[selectedPair]?.high.toFixed(2)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-400">24h Low</div>
+                            <div className="text-sm">
+                              ${priceStats[selectedPair]?.low.toFixed(2)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-400">24h Volume</div>
+                            <div className="text-sm">
+                              {priceStats[selectedPair]?.volume.toFixed(2)}{" "}
+                              {getCurrentPairTokens().baseAsset}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-hidden"> {/* Add wrapper div with flex-1 and overflow-hidden */}
+                      <TradingViewWidget
+                        trades={trades}
+                        userTrades={userTrades}
+                        selectedTimeframe={selectedTimeframe}
+                        onTimeframeChange={setSelectedTimeframe}
+                      />
+                    </div>
                   </div>
 
                   {/* Order Book/Trades Column */}
@@ -1820,17 +1932,31 @@ function App() {
                   <div className="flex border-b border-fuel-dark-600">
                     <button
                       className={`flex-1 py-2 text-center text-sm font-medium transition-colors outline-none
-                        ${mobileBottomView === "orders" ? "text-fuel-green" : "text-gray-400"}`}
+                        ${
+                          mobileBottomView === "orders"
+                            ? "text-fuel-green"
+                            : "text-gray-400"
+                        }`}
                       onClick={() => setMobileBottomView("orders")}
                     >
-                      Orders{activeOrders.length > 0 ? ` (${activeOrders.length})` : ''}
+                      Orders
+                      {activeOrders.length > 0
+                        ? ` (${activeOrders.length})`
+                        : ""}
                     </button>
                     <button
                       className={`flex-1 py-2 text-center text-sm font-medium transition-colors outline-none
-                        ${mobileBottomView === "history" ? "text-fuel-green" : "text-gray-400"}`}
+                        ${
+                          mobileBottomView === "history"
+                            ? "text-fuel-green"
+                            : "text-gray-400"
+                        }`}
                       onClick={() => setMobileBottomView("history")}
                     >
-                      History{orderHistory.length > 0 ? ` (${orderHistory.length})` : ''}
+                      History
+                      {orderHistory.length > 0
+                        ? ` (${orderHistory.length})`
+                        : ""}
                     </button>
                   </div>
 
@@ -1953,7 +2079,7 @@ function App() {
               </div>
 
               {/* Right section for Trading Interface */}
-              <div className="w-[220px] flex flex-col min-h-0 border-l border-fuel-dark-600 bg-fuel-dark-800">
+              <div className="w-[250px] flex flex-col min-h-0 border-l border-fuel-dark-600 bg-fuel-dark-800">
                 <div className="p-3">
                   {/* Buy/Sell Buttons - More compact */}
                   <div className="flex mb-2">
