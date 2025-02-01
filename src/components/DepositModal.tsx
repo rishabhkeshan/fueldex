@@ -54,10 +54,10 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center sm:pt-16">
-      <div className="bg-fuel-dark-800 w-full h-full sm:h-auto sm:max-w-md sm:rounded-2xl shadow-2xl sm:mx-4 border border-fuel-dark-600 overflow-auto">
-        {/* Header - Reduced padding */}
-        <div className="sticky top-0 z-10 bg-fuel-dark-800 flex items-center justify-between p-3 sm:p-4 border-b border-fuel-dark-600">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center sm:pt-20">
+      <div className="bg-fuel-dark-800 w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-[380px] sm:rounded-2xl shadow-2xl sm:mx-4 border border-fuel-dark-600 overflow-auto">
+        {/* Header - Keep sticky */}
+        <div className="sticky top-0 z-10 bg-fuel-dark-800 flex items-center justify-between p-2.5 sm:p-3.5 border-b border-fuel-dark-600">
           <h2 className="text-base sm:text-lg font-semibold">Deposit</h2>
           <button 
             onClick={onClose}
@@ -67,43 +67,43 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
           </button>
         </div>
 
-        {/* Content - Reduced padding and spacing */}
-        <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+        {/* Content - Will scroll if needed */}
+        <div className="p-2.5 sm:p-3.5 space-y-3 overflow-y-auto">
           {/* Network Selection */}
-          <div className="space-y-1.5 sm:space-y-2">
-            <label className="text-sm text-gray-400 flex items-center space-x-2">
+          <div className="space-y-1.5">
+            <label className="text-xs text-gray-400 flex items-center space-x-2">
               <span>Network</span>
-              <Info className="w-4 h-4 text-gray-500" />
+              <Info className="w-3.5 h-3.5 text-gray-500" />
             </label>
             <div className="relative">
               <button 
-                className="w-full bg-fuel-dark-700 p-3 rounded-xl flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
+                className="w-full bg-fuel-dark-700 p-2.5 rounded-xl flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
                 onClick={() => setIsNetworkOpen(!isNetworkOpen)}
               >
-                <div className="flex items-center space-x-3">
-                  <div className={`w-7 h-7 rounded-full ${networks.find(n => n.name === selectedNetwork)?.color} flex items-center justify-center`}>
+                <div className="flex items-center space-x-2.5">
+                  <div className={`w-6 h-6 rounded-full ${networks.find(n => n.name === selectedNetwork)?.color} flex items-center justify-center`}>
                     <span className="text-white text-sm font-medium">{networks.find(n => n.name === selectedNetwork)?.icon}</span>
                   </div>
-                  <span className="font-medium">{selectedNetwork}</span>
+                  <span className="font-medium text-sm">{selectedNetwork}</span>
                 </div>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isNetworkOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isNetworkOpen ? 'rotate-180' : ''}`} />
               </button>
               
               {isNetworkOpen && (
-                <div className="absolute w-[calc(100%-1.5rem)] sm:w-full mt-2 bg-fuel-dark-700 rounded-xl border border-fuel-dark-600 shadow-xl z-10 py-1.5">
+                <div className="absolute w-[calc(100%-1.5rem)] sm:w-full mt-2 bg-fuel-dark-700 rounded-xl border border-fuel-dark-600 shadow-xl z-10 py-1">
                   {networks.map((network) => (
                     <button
                       key={network.id}
-                      className="w-full px-3 py-2 flex items-center space-x-3 hover:bg-fuel-dark-600 transition-colors"
+                      className="w-full px-2.5 py-1.5 flex items-center space-x-2.5 hover:bg-fuel-dark-600 transition-colors"
                       onClick={() => {
                         setSelectedNetwork(network.name);
                         setIsNetworkOpen(false);
                       }}
                     >
-                      <div className={`w-7 h-7 rounded-full ${network.color} flex items-center justify-center`}>
+                      <div className={`w-6 h-6 rounded-full ${network.color} flex items-center justify-center`}>
                         <span className="text-white text-sm font-medium">{network.icon}</span>
                       </div>
-                      <span className="font-medium">{network.name}</span>
+                      <span className="font-medium text-sm">{network.name}</span>
                     </button>
                   ))}
                 </div>
@@ -111,86 +111,64 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
             </div>
           </div>
 
-          {/* Token Selection - Similar adjustments */}
-          <div className="space-y-1.5 sm:space-y-2">
-            <label className="text-sm text-gray-400 flex items-center space-x-2">
+          {/* Token Selection */}
+          <div className="space-y-1.5">
+            <label className="text-xs text-gray-400 flex items-center space-x-2">
               <span>Token</span>
-              <Info className="w-4 h-4 text-gray-500" />
+              <Info className="w-3.5 h-3.5 text-gray-500" />
             </label>
             <div className="relative">
               <button 
-                className="w-full bg-fuel-dark-700 p-3 rounded-xl flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
+                className="w-full bg-fuel-dark-700 p-2.5 rounded-xl flex items-center justify-between hover:bg-fuel-dark-600 transition-colors"
                 onClick={() => setIsTokenOpen(!isTokenOpen)}
               >
-                <div className="flex items-center space-x-3">
-                  <div className={`w-7 h-7 rounded-full ${tokens.find(t => t.symbol === selectedToken)?.color} flex items-center justify-center`}>
+                <div className="flex items-center space-x-2.5">
+                  <div className={`w-6 h-6 rounded-full ${tokens.find(t => t.symbol === selectedToken)?.color} flex items-center justify-center`}>
                     <span className="text-white text-sm font-medium">{tokens.find(t => t.symbol === selectedToken)?.icon}</span>
                   </div>
-                  <span className="font-medium">{selectedToken}</span>
+                  <span className="font-medium text-sm">{selectedToken}</span>
                 </div>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isTokenOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isTokenOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {isTokenOpen && (
-                <div className="absolute w-[calc(100%-1.5rem)] sm:w-full mt-2 bg-fuel-dark-700 rounded-xl border border-fuel-dark-600 shadow-xl z-10 p-1.5">
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {tokens.map((token) => (
-                      <button
-                        key={token.symbol}
-                        className="p-2 flex items-center space-x-2 hover:bg-fuel-dark-600 rounded-lg transition-colors"
-                        onClick={() => {
-                          setSelectedToken(token.symbol);
-                          setIsTokenOpen(false);
-                        }}
-                      >
-                        <div className={`w-7 h-7 rounded-full ${token.color} flex items-center justify-center`}>
-                          <span className="text-white text-sm font-medium">{token.icon}</span>
-                        </div>
-                        <span className="font-medium">{token.symbol}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Quick Token Selection - Adjusted sizing */}
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5">
-              {quickTokensData.map((token) => (
-                <button
-                  key={token.symbol}
-                  onClick={() => setSelectedToken(token.symbol)}
-                  className={`flex items-center space-x-1.5 px-2 py-1 rounded-lg text-sm font-medium transition-colors ${
-                    selectedToken === token.symbol 
-                      ? 'bg-fuel-dark-600 text-fuel-green' 
-                      : 'bg-fuel-dark-700 text-gray-400 hover:bg-fuel-dark-600 hover:text-gray-300'
-                  }`}
-                >
-                  <div className={`w-4 h-4 rounded-full ${token.color} flex items-center justify-center`}>
-                    <span className="text-white text-xs">{token.icon}</span>
-                  </div>
-                  <span className="text-xs">{token.symbol}</span>
-                </button>
-              ))}
+              {/* Quick Token Selection */}
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 mt-1.5">
+                {quickTokensData.map((token) => (
+                  <button
+                    key={token.symbol}
+                    onClick={() => setSelectedToken(token.symbol)}
+                    className={`flex items-center space-x-1.5 px-2 py-1 rounded-lg text-sm font-medium transition-colors ${
+                      selectedToken === token.symbol 
+                        ? 'bg-fuel-dark-600 text-fuel-green' 
+                        : 'bg-fuel-dark-700 text-gray-400 hover:bg-fuel-dark-600 hover:text-gray-300'
+                    }`}
+                  >
+                    <div className={`w-3.5 h-3.5 rounded-full ${token.color} flex items-center justify-center`}>
+                      <span className="text-white text-xs">{token.icon}</span>
+                    </div>
+                    <span className="text-xs">{token.symbol}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Amount Input - Adjusted sizing */}
-          <div className="space-y-2 sm:space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
-              <label className="text-sm text-gray-400 flex items-center space-x-2">
+          {/* Amount Input */}
+          <div className="space-y-1.5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-0">
+              <label className="text-xs text-gray-400 flex items-center space-x-2">
                 <span>Amount</span>
-                <Info className="w-4 h-4 text-gray-500" />
+                <Info className="w-3.5 h-3.5 text-gray-500" />
               </label>
               <div className="flex items-center space-x-2">
-                <span className="text-xs sm:text-sm text-gray-400">Available: 0 {selectedToken}</span>
+                <span className="text-xs text-gray-400">Available: 0 {selectedToken}</span>
                 <button className="text-xs text-fuel-green font-medium hover:text-opacity-80">MAX</button>
               </div>
             </div>
             <div className="relative">
               <input
                 type="text"
-                className="w-full bg-fuel-dark-700 p-3 rounded-xl text-lg focus:outline-none focus:ring-2 focus:ring-fuel-green/20 transition-all"
+                className="w-full bg-fuel-dark-700 p-2.5 rounded-xl text-base outline-none focus:ring-2 focus:ring-fuel-green/20 transition-all"
                 placeholder={`0 ${selectedToken}`}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
