@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowDownUp, Info, Settings } from 'lucide-react';
+import { ArrowDownUp, Info, Settings, Loader2 } from 'lucide-react';
 import WalletConnect from './WalletConnect';
 import USDTIcon from '../assets/usdt.svg';
 import USDCIcon from '../assets/usdc.svg';
@@ -70,6 +70,15 @@ function SwapComponent() {
   // Add this state
   const [enablePartialExecutions, setEnablePartialExecutions] = useState(false);
 
+  // Add loading state for price updates
+  const [isPriceLoading, setIsPriceLoading] = useState(false);
+
+  // Add price update animation
+  const handlePriceRefresh = () => {
+    setIsPriceLoading(true);
+    setTimeout(() => setIsPriceLoading(false), 1000);
+  };
+
   // Add swap function
   const handleSwapTokens = () => {
     const tempFromToken = { ...fromToken };
@@ -133,27 +142,27 @@ function SwapComponent() {
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center pt-1 sm:pt-3">
+    <div className="flex-1 flex flex-col items-center pt-1 sm:pt-16 bg-fuel-dark-800">
       <div className="w-full max-w-[420px] mx-auto px-2">
-        {/* Swap Type Selector */}
-        <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-          <div className="flex space-x-2 sm:space-x-3 text-[10px] sm:text-xs font-medium">
+        {/* Update Swap Type Selector styling */}
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <div className="flex p-1 bg-fuel-dark-700 rounded-lg">
             <button
-              className={
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
                 activeSwapType === "swap"
-                  ? "text-fuel-green"
+                  ? "bg-fuel-dark-600 text-white shadow-sm"
                   : "text-gray-400 hover:text-gray-300"
-              }
+              }`}
               onClick={() => setActiveSwapType("swap")}
             >
               Swap
             </button>
             <button
-              className={
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
                 activeSwapType === "limit"
-                  ? "text-fuel-green"
+                  ? "bg-fuel-dark-600 text-white shadow-sm"
                   : "text-gray-400 hover:text-gray-300"
-              }
+              }`}
               onClick={() => setActiveSwapType("limit")}
             >
               Limit
@@ -312,328 +321,322 @@ function SwapComponent() {
           </div>
         </div>
 
-        {/* Conditional render based on activeSwapType */}
-        {activeSwapType === "swap" ? (
-          <div className="bg-fuel-dark-800 rounded-xl p-1.5 sm:p-2 shadow-lg">
-            {/* From Token */}
-            <div className="space-y-1 sm:space-y-1.5">
-              <div className="flex justify-between text-[10px] sm:text-xs">
-                <span className="text-gray-400">From</span>
-                <span className="text-gray-400">
-                  Balance: {fromToken.balance} {fromToken.symbol}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2 bg-fuel-dark-700 p-1.5 sm:p-2 rounded-lg">
-                <div className="relative">
-                  <button
-                    className="flex items-center space-x-1.5 px-1.5 py-1 rounded-lg hover:bg-fuel-dark-600 min-w-[90px] sm:min-w-[110px]"
-                    onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
-                  >
-                    <div className="flex items-center justify-center">
-                      {fromToken.icon}
-                    </div>
-                    <span className="text-sm sm:text-base">{fromToken.symbol}</span>
-                    <span className="text-gray-400">▼</span>
-                  </button>
-                  <TokenDropdown
-                    isOpen={isFromTokenOpen}
-                    onClose={() => setIsFromTokenOpen(false)}
-                    onSelect={setFromToken}
-                    selectedToken={fromToken}
-                    excludeToken={toToken.symbol}
-                  />
-                </div>
-                <input
-                  type="text"
-                  className="flex-1 bg-transparent text-lg sm:text-xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis"
-                  placeholder="0.00"
-                  value={fromAmount}
-                  onChange={(e) => setFromAmount(e.target.value)}
-                />
-              </div>
-              <div className="text-right text-[10px] sm:text-xs text-gray-400">
-                ≈ ${fromToken.usdValue}
-              </div>
-            </div>
-
-            {/* Swap Direction Button */}
-            <div className="flex justify-center my-1 sm:my-1.5">
-              <button
-                className="p-1.5 sm:p-2 rounded-lg bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-colors"
-                onClick={handleSwapTokens}
-              >
-                <ArrowDownUp className="w-4 h-4 sm:w-5 sm:h-5 text-fuel-green" />
-              </button>
-            </div>
-
-            {/* To Token */}
-            <div className="space-y-1.5 sm:space-y-2">
-              <div className="flex justify-between text-[10px] sm:text-xs">
-                <span className="text-gray-400">To</span>
-                <span className="text-gray-400">
-                  Balance: {toToken.balance} {toToken.symbol}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2 bg-fuel-dark-700 p-1.5 sm:p-2 rounded-lg">
-                <div className="relative">
-                  <button
-                    className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
-                    onClick={() => setIsToTokenOpen(!isToTokenOpen)}
-                  >
-                    <div className="flex items-center justify-center">
-                      {toToken.icon}
-                    </div>
-                    <span className="text-sm sm:text-base">{toToken.symbol}</span>
-                    <span className="text-gray-400">▼</span>
-                  </button>
-                  <TokenDropdown
-                    isOpen={isToTokenOpen}
-                    onClose={() => setIsToTokenOpen(false)}
-                    onSelect={setToToken}
-                    selectedToken={toToken}
-                    excludeToken={fromToken.symbol}
-                  />
-                </div>
-                <input
-                  type="text"
-                  className="flex-1 bg-transparent text-xl sm:text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis"
-                  placeholder="0.00"
-                  value={toAmount}
-                  onChange={(e) => setToAmount(e.target.value)}
-                />
-              </div>
-              <div className="text-right text-[10px] sm:text-xs text-gray-400">
-                ≈ ${toToken.usdValue}
-              </div>
-            </div>
-
-            {/* Additional Info */}
-            <div className="mt-1.5 sm:mt-2 space-y-1">
-              <div className="flex items-center justify-between text-[10px] sm:text-xs p-1 sm:p-1.5 rounded-lg bg-fuel-dark-700">
-                <div className="flex items-center space-x-1">
+        <div className="bg-fuel-dark-800 rounded-xl p-3 sm:p-4 shadow-lg border border-fuel-dark-600">
+          {activeSwapType === "swap" ? (
+            // Swap Mode UI
+            <>
+              {/* From Token section */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-400 font-medium">From</span>
                   <span className="text-gray-400">
-                    1 ETH = 78,079.0602 FUEL
-                  </span>
-                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
-                </div>
-                <span className="text-gray-400">(≈ $3,137.58)</span>
-              </div>
-
-              <div className="space-y-0.5 sm:space-y-1 p-1 sm:p-1.5 rounded-lg bg-fuel-dark-700">
-                <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-400">Network costs (est.)</span>
-                  <span>5.486 FUEL + gas (≈ $0.38)</span>
-                </div>
-                <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-400">Slippage tolerance</span>
-                  <span>
-                    {slippageTolerance === "auto"
-                      ? "Auto"
-                      : `${slippageDisplay}%`}
+                    Balance: <span className="text-white">{fromToken.balance}</span> {fromToken.symbol}
                   </span>
                 </div>
-                <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-400">Transaction expiration</span>
-                  <span>{deadlineDisplay} minutes</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Swap Button */}
-            <div className="mt-1.5 sm:mt-2">
-              <WalletConnect
-                variant="trade"
-                tradeType="buy"
-                tokenSymbol={toToken.symbol}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="bg-fuel-dark-800 rounded-xl p-1.5 sm:p-2 shadow-lg">
-            {/* Sell Amount Section */}
-            <div className="space-y-1 sm:space-y-1.5">
-              <div className="flex justify-between text-[10px] sm:text-xs">
-                <span className="text-gray-400">Sell amount</span>
-                <div className="flex items-center space-x-2">
-                  <span className="text-gray-400">
-                    Balance: {fromToken.balance} {fromToken.symbol}
-                  </span>
-                  <button className="text-[10px] sm:text-xs text-fuel-green">
-                    MAX
-                  </button>
-                </div>
-              </div>
-              <div className="flex items-center space-x-2 bg-fuel-dark-700 p-1.5 sm:p-2 rounded-lg">
-                <div className="relative">
-                  <button
-                    className="flex items-center space-x-1.5 px-1.5 py-1 rounded-lg hover:bg-fuel-dark-600 min-w-[90px] sm:min-w-[110px]"
-                    onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
-                  >
-                    <div className="flex items-center justify-center">
-                      {fromToken.icon}
-                    </div>
-                    <span className="text-sm sm:text-base">{fromToken.symbol}</span>
-                    <span className="text-gray-400">▼</span>
-                  </button>
-                  <TokenDropdown
-                    isOpen={isFromTokenOpen}
-                    onClose={() => setIsFromTokenOpen(false)}
-                    onSelect={setFromToken}
-                    selectedToken={fromToken}
-                    excludeToken={toToken.symbol}
-                  />
-                </div>
-                <input
-                  type="text"
-                  className="flex-1 bg-transparent text-lg sm:text-xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis"
-                  placeholder="0.00"
-                  value={fromAmount}
-                  onChange={(e) => setFromAmount(e.target.value)}
-                />
-              </div>
-              <div className="text-right text-[10px] sm:text-xs text-gray-400">
-                ≈ ${fromToken.usdValue}
-              </div>
-            </div>
-
-            {/* Limit Price Section */}
-            <div className="grid grid-cols-3 gap-1 mt-1.5 sm:mt-2">
-              <div className="col-span-2">
-                <div className="text-[10px] sm:text-xs text-gray-400 mb-0.5 sm:mb-1">
-                  Limit price <span className="text-green-400">(+0.1%)</span>
-                </div>
-                <div className="flex items-center bg-fuel-dark-700 p-1.5 sm:p-2 rounded-lg h-[32px] sm:h-[36px]">
+                <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
+                  <div className="relative">
+                    <button
+                      className="flex items-center space-x-1.5 px-1.5 py-1 rounded-lg hover:bg-fuel-dark-600 min-w-[90px] sm:min-w-[110px]"
+                      onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
+                    >
+                      <div className="flex items-center justify-center">
+                        {fromToken.icon}
+                      </div>
+                      <span className="text-sm sm:text-base">{fromToken.symbol}</span>
+                      <span className="text-gray-400">▼</span>
+                    </button>
+                    <TokenDropdown
+                      isOpen={isFromTokenOpen}
+                      onClose={() => setIsFromTokenOpen(false)}
+                      onSelect={setFromToken}
+                      selectedToken={fromToken}
+                      excludeToken={toToken.symbol}
+                    />
+                  </div>
                   <input
                     type="text"
-                    className="flex-1 bg-transparent text-xs sm:text-sm font-medium focus:outline-none min-w-0 overflow-hidden text-ellipsis"
-                    placeholder="0.000000"
-                    value={limitPrice}
-                    onChange={(e) => setLimitPrice(e.target.value)}
-                  />
-                  <button className="text-xs sm:text-sm text-gray-400 hover:text-gray-300 px-2">
-                    {fromToken.symbol}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <div className="text-[10px] sm:text-xs text-gray-400 mb-0.5 sm:mb-1">
-                  Expiry
-                </div>
-                <div className="relative">
-                  <button
-                    className="w-full bg-fuel-dark-700 p-1.5 sm:p-2 rounded-lg text-left flex items-center justify-between text-xs sm:text-sm h-[32px] sm:h-[36px]"
-                    onClick={() => setIsExpiryOpen(!isExpiryOpen)}
-                  >
-                    <span>{expiryDays} Days</span>
-                    <span className="text-gray-400">▼</span>
-                  </button>
-                  {isExpiryOpen && (
-                    <div className="absolute top-full left-0 w-full mt-1 bg-fuel-dark-700 rounded-lg shadow-lg z-10">
-                      {["1", "7", "30"].map((days) => (
-                        <button
-                          key={days}
-                          className="w-full p-2 text-left hover:bg-fuel-dark-600 text-xs sm:text-sm"
-                          onClick={() => {
-                            setExpiryDays(days);
-                            setIsExpiryOpen(false);
-                          }}
-                        >
-                          {days} Days
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Swap Direction Button */}
-            <div className="flex justify-center my-1 sm:my-1.5">
-              <button
-                className="p-1.5 sm:p-2 rounded-lg bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-colors"
-                onClick={handleSwapTokens}
-              >
-                <ArrowDownUp className="w-4 h-4 sm:w-5 sm:h-5 text-fuel-green" />
-              </button>
-            </div>
-
-            {/* Receive Amount Section */}
-            <div className="space-y-1.5 sm:space-y-2">
-              <div className="flex justify-between text-[10px] sm:text-xs">
-                <span className="text-gray-400">Receive at least</span>
-                <span className="text-gray-400">
-                  Balance: {toToken.balance} {toToken.symbol}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2 bg-fuel-dark-700 p-1.5 sm:p-2 rounded-lg">
-                <div className="relative">
-                  <button
-                    className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
-                    onClick={() => setIsToTokenOpen(!isToTokenOpen)}
-                  >
-                    <div className="flex items-center justify-center">
-                      {toToken.icon}
-                    </div>
-                    <span className="text-sm sm:text-base">{toToken.symbol}</span>
-                    <span className="text-gray-400">▼</span>
-                  </button>
-                  <TokenDropdown
-                    isOpen={isToTokenOpen}
-                    onClose={() => setIsToTokenOpen(false)}
-                    onSelect={setToToken}
-                    selectedToken={toToken}
-                    excludeToken={fromToken.symbol}
+                    className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
+                    placeholder="0.00"
+                    value={fromAmount}
+                    onChange={(e) => setFromAmount(e.target.value)}
                   />
                 </div>
-                <input
-                  type="text"
-                  className="flex-1 bg-transparent text-xl sm:text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis"
-                  placeholder="0.00"
-                  value={toAmount}
-                  onChange={(e) => setToAmount(e.target.value)}
-                />
+                <div className="text-right text-xs text-gray-400">
+                  ≈ $<span className="text-white">{fromToken.usdValue}</span>
+                </div>
               </div>
-              <div className="text-right text-[10px] sm:text-xs text-gray-400">
-                ≈ ${toToken.usdValue}
-              </div>
-            </div>
 
-            {/* Additional Info */}
-            <div className="mt-1.5 sm:mt-2 space-y-1">
-              <div className="flex items-center justify-between text-[10px] sm:text-xs p-1 sm:p-1.5 rounded-lg bg-fuel-dark-700">
-                <div className="flex items-center space-x-1">
+              {/* Swap Direction Button */}
+              <div className="flex justify-center -my-2 relative z-10">
+                <button
+                  className="p-2 rounded-xl bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-all duration-200 border-4 border-fuel-dark-800 shadow-lg group"
+                  onClick={handleSwapTokens}
+                >
+                  <ArrowDownUp className="w-5 h-5 text-fuel-green group-hover:rotate-180 transition-transform duration-200" />
+                </button>
+              </div>
+
+              {/* To Token section */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-400 font-medium">To</span>
                   <span className="text-gray-400">
-                    1 ETH = 78,079.0602 FUEL
+                    Balance: <span className="text-white">{toToken.balance}</span> {toToken.symbol}
                   </span>
-                  <Info className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />
                 </div>
-                <span className="text-gray-400">(≈ $3,137.58)</span>
+                <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
+                  <div className="relative">
+                    <button
+                      className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
+                      onClick={() => setIsToTokenOpen(!isToTokenOpen)}
+                    >
+                      <div className="flex items-center justify-center">
+                        {toToken.icon}
+                      </div>
+                      <span className="text-sm sm:text-base">{toToken.symbol}</span>
+                      <span className="text-gray-400">▼</span>
+                    </button>
+                    <TokenDropdown
+                      isOpen={isToTokenOpen}
+                      onClose={() => setIsToTokenOpen(false)}
+                      onSelect={setToToken}
+                      selectedToken={toToken}
+                      excludeToken={fromToken.symbol}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
+                    placeholder="0.00"
+                    value={toAmount}
+                    onChange={(e) => setToAmount(e.target.value)}
+                  />
+                </div>
+                <div className="text-right text-xs text-gray-400">
+                  ≈ $<span className="text-white">{toToken.usdValue}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            // Limit Order Mode UI
+            <>
+              {/* Sell Amount Section */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-400 font-medium">Sell amount</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-gray-400">
+                      Balance: <span className="text-white">{fromToken.balance}</span> {fromToken.symbol}
+                    </span>
+                    <button className="text-xs text-fuel-green hover:text-fuel-green-light">
+                      MAX
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
+                  <div className="relative">
+                    <button
+                      className="flex items-center space-x-1.5 px-1.5 py-1 rounded-lg hover:bg-fuel-dark-600 min-w-[90px] sm:min-w-[110px]"
+                      onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
+                    >
+                      <div className="flex items-center justify-center">
+                        {fromToken.icon}
+                      </div>
+                      <span className="text-sm sm:text-base">{fromToken.symbol}</span>
+                      <span className="text-gray-400">▼</span>
+                    </button>
+                    <TokenDropdown
+                      isOpen={isFromTokenOpen}
+                      onClose={() => setIsFromTokenOpen(false)}
+                      onSelect={setFromToken}
+                      selectedToken={fromToken}
+                      excludeToken={toToken.symbol}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
+                    placeholder="0.00"
+                    value={fromAmount}
+                    onChange={(e) => setFromAmount(e.target.value)}
+                  />
+                </div>
+                <div className="text-right text-xs text-gray-400">
+                  ≈ $<span className="text-white">{fromToken.usdValue}</span>
+                </div>
               </div>
 
-              <div className="space-y-0.5 sm:space-y-1 p-1 sm:p-1.5 rounded-lg bg-fuel-dark-700">
-                <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-400">Network costs (est.)</span>
-                  <span>5.486 FUEL + gas (≈ $0.38)</span>
+              {/* Limit Price and Expiry Section */}
+              <div className="grid grid-cols-3 gap-2 mt-4">
+                <div className="col-span-2">
+                  <div className="text-xs text-gray-400 mb-1">
+                    Limit price <span className="text-green-400">(+0.1%)</span>
+                  </div>
+                  <div className="flex items-center bg-fuel-dark-700 p-2 rounded-xl">
+                    <input
+                      type="text"
+                      className="flex-1 bg-transparent text-sm font-medium focus:outline-none min-w-0"
+                      placeholder="0.000000"
+                      value={limitPrice}
+                      onChange={(e) => setLimitPrice(e.target.value)}
+                    />
+                    <span className="text-sm text-gray-400 px-2">{toToken.symbol}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-400">Order expiration</span>
-                  <span>{expiryDays} days</span>
-                </div>
-                <div className="flex justify-between text-xs sm:text-sm">
-                  <span className="text-gray-400">Partial fills</span>
-                  <span>{enablePartialExecutions ? 'Enabled' : 'Disabled'}</span>
+                <div>
+                  <div className="text-xs text-gray-400 mb-1">Expiry</div>
+                  <div className="relative">
+                    <button
+                      className="w-full bg-fuel-dark-700 p-2 rounded-xl text-left flex items-center justify-between text-sm"
+                      onClick={() => setIsExpiryOpen(!isExpiryOpen)}
+                    >
+                      <span>{expiryDays} Days</span>
+                      <span className="text-gray-400">▼</span>
+                    </button>
+                    {isExpiryOpen && (
+                      <div className="absolute top-full left-0 w-full mt-1 bg-fuel-dark-700 rounded-xl shadow-lg z-10">
+                        {["1", "7", "30"].map((days) => (
+                          <button
+                            key={days}
+                            className="w-full p-2 text-left hover:bg-fuel-dark-600 text-sm"
+                            onClick={() => {
+                              setExpiryDays(days);
+                              setIsExpiryOpen(false);
+                            }}
+                          >
+                            {days} Days
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* Swap Direction Button */}
+              <div className="flex justify-center my-4">
+                <button
+                  className="p-2 rounded-xl bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-all duration-200 border-4 border-fuel-dark-800 shadow-lg group"
+                  onClick={handleSwapTokens}
+                >
+                  <ArrowDownUp className="w-5 h-5 text-fuel-green group-hover:rotate-180 transition-transform duration-200" />
+                </button>
+              </div>
+
+              {/* Receive Amount Section */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-400 font-medium">Receive at least</span>
+                  <span className="text-gray-400">
+                    Balance: <span className="text-white">{toToken.balance}</span> {toToken.symbol}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
+                  <div className="relative">
+                    <button
+                      className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
+                      onClick={() => setIsToTokenOpen(!isToTokenOpen)}
+                    >
+                      <div className="flex items-center justify-center">
+                        {toToken.icon}
+                      </div>
+                      <span className="text-sm sm:text-base">{toToken.symbol}</span>
+                      <span className="text-gray-400">▼</span>
+                    </button>
+                    <TokenDropdown
+                      isOpen={isToTokenOpen}
+                      onClose={() => setIsToTokenOpen(false)}
+                      onSelect={setToToken}
+                      selectedToken={toToken}
+                      excludeToken={fromToken.symbol}
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
+                    placeholder="0.00"
+                    value={toAmount}
+                    onChange={(e) => setToAmount(e.target.value)}
+                  />
+                </div>
+                <div className="text-right text-xs text-gray-400">
+                  ≈ $<span className="text-white">{toToken.usdValue}</span>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Additional Info section - stays mostly the same but adapts to mode */}
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-fuel-dark-700/50 backdrop-blur-sm">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-400">
+                  1 {fromToken.symbol} = {(78079.0602).toLocaleString()} {toToken.symbol}
+                </span>
+                <Info className="w-4 h-4 text-gray-500" />
+              </div>
+              <button
+                className="flex items-center space-x-1 text-fuel-green hover:text-fuel-green-light transition-colors"
+                onClick={handlePriceRefresh}
+                disabled={isPriceLoading}
+              >
+                {isPriceLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <span className="text-sm">Refresh</span>
+                )}
+              </button>
             </div>
 
-            {/* Place Order Button */}
-            <div className="mt-1.5 sm:mt-2">
-              <button className="w-full py-2.5 sm:py-3 bg-fuel-green text-fuel-dark-900 rounded-lg font-medium hover:bg-opacity-90 transition-colors text-sm sm:text-base">
-                Place Order
-              </button>
+            <div className="p-2.5 rounded-xl bg-fuel-dark-700/50 backdrop-blur-sm space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Network costs (est.)</span>
+                <span className="font-medium">5.486 FUEL + gas <span className="text-gray-400">(≈ $0.38)</span></span>
+              </div>
+              {activeSwapType === "swap" ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Slippage tolerance</span>
+                    <span className="font-medium">
+                      {slippageTolerance === "auto" ? "Auto" : `${slippageDisplay}%`}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Transaction expiration</span>
+                    <span className="font-medium">{deadlineDisplay} minutes</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Order expiration</span>
+                    <span className="font-medium">{expiryDays} days</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Partial fills</span>
+                    <span className="font-medium">{enablePartialExecutions ? 'Enabled' : 'Disabled'}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Action Button */}
+        <div className="mt-4">
+          {activeSwapType === "swap" ? (
+            <WalletConnect
+              variant="trade"
+              tradeType="buy"
+              tokenSymbol={toToken.symbol}
+              className="w-full py-3.5 text-base font-medium rounded-xl transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
+            />
+          ) : (
+            <button className="w-full py-3.5 bg-fuel-green text-fuel-dark-900 rounded-xl font-medium hover:bg-opacity-90 transition-colors text-base">
+              Place Order
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
