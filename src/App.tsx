@@ -826,7 +826,7 @@ function App() {
     
     for (let i = 0; i < tradesPerUpdate; i++) {
       // Use previous trade as base for next trade
-      const prevTrade = trades[trades.length - 1];
+      const prevTrade = newSimulatedTrades[newSimulatedTrades.length - 1] || trades[trades.length - 1];
       const prevPrice = prevTrade.close || prevTrade.price;
       
       // Calculate price movement
@@ -893,9 +893,14 @@ function App() {
       );
       
       // Update price stats for the current pair
+      const latestTrade = newSimulatedTrades[newSimulatedTrades.length - 1];
       setPriceStats(prevStats => ({
         ...prevStats,
-        [selectedPair]: calculatePriceStats(uniqueTrades)
+        [selectedPair]: {
+          ...calculatePriceStats(uniqueTrades),
+          // Ensure last price is always the most recent trade's price
+          last: latestTrade.close || latestTrade.price
+        }
       }));
       
       return uniqueTrades;
@@ -1004,7 +1009,7 @@ function App() {
           <div className="flex items-center justify-between sm:space-x-8">
             <div className="flex items-center space-x-1">
               <img src={FuelLogo} alt="FUEL Logo" className="w-5 h-5 sm:w-7 sm:h-7 mt-1.5" />
-              <span className="text-base sm:text-lg font-bold">FUEL DEX</span>
+              <span className="text-base sm:text-lg font-bold">Order Book Demo</span>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
               <button
@@ -1694,22 +1699,22 @@ function App() {
                             </div>
                           </div>
                         </div>
-                        <div className="grid grid-cols-3 gap-4 text-right">
+                        <div className="flex gap-8 text-right px-3">
                           <div>
                             <div className="text-xs text-gray-400">24h High</div>
-                            <div className="text-sm">
+                            <div className="text-sm font-medium">
                               ${priceStats[selectedPair]?.high.toFixed(2)}
                             </div>
                           </div>
                           <div>
                             <div className="text-xs text-gray-400">24h Low</div>
-                            <div className="text-sm">
+                            <div className="text-sm font-medium">
                               ${priceStats[selectedPair]?.low.toFixed(2)}
                             </div>
                           </div>
                           <div>
                             <div className="text-xs text-gray-400">24h Volume</div>
-                            <div className="text-sm">
+                            <div className="text-sm font-medium">
                               {priceStats[selectedPair]?.volume.toFixed(2)}{" "}
                               {getCurrentPairTokens().baseAsset}
                             </div>
