@@ -1001,6 +1001,9 @@ function App() {
   // Add these new state variables near the top with other state declarations
   const [searchQuery, setSearchQuery] = useState('');
 
+  // First, add this state for the slider animation
+  const [sliderPosition, setSliderPosition] = useState(orderType === 'market' ? 0 : 50);
+
   return (
     <div className="h-screen flex flex-col bg-fuel-dark-900 text-gray-100">
       {/* Header - Always visible */}
@@ -1009,7 +1012,7 @@ function App() {
           <div className="flex items-center justify-between sm:space-x-8">
             <div className="flex items-center space-x-1">
               <img src={FuelLogo} alt="FUEL Logo" className="w-5 h-5 sm:w-7 sm:h-7 mt-1.5" />
-              <span className="text-base sm:text-lg font-bold">Order Book Demo</span>
+              <span className="text-base sm:text-lg font-bold">Order Book</span>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
               <button
@@ -1780,7 +1783,7 @@ function App() {
                             <div className="flex-1 flex flex-col min-h-0">
                               {/* Asks */}
                               <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
-                                <div className="flex flex-col-reverse space-y-reverse space-y-[2px]">
+                                <div className="flex flex-col-reverse space-y-reverse space-y-[6px]">
                                   {orderBook.asks.map((order, i) => (
                                     <div
                                       key={i}
@@ -1836,7 +1839,7 @@ function App() {
 
                               {/* Bids */}
                               <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
-                                <div className="space-y-[2px]">
+                                <div className="space-y-[6px]">
                                   {orderBook.bids.map((order, i) => (
                                     <div
                                       key={i}
@@ -2084,12 +2087,47 @@ function App() {
               </div>
 
               {/* Right section for Trading Interface */}
-              <div className="w-[250px] flex flex-col min-h-0 border-l border-fuel-dark-600 bg-fuel-dark-800">
+              <div className="w-[260px] flex flex-col min-h-0 border-l border-fuel-dark-600 bg-fuel-dark-800">
                 <div className="p-3">
-                  {/* Buy/Sell Buttons - More compact */}
-                  <div className="flex mb-2">
+                  {/* Market/Limit Tabs with sliding indicator */}
+                  <div className="mb-3">
+                    <div className="flex relative">
+                      <button
+                        className={`flex-1 py-2 text-sm font-medium transition-colors outline-none relative
+                          ${orderType === "market" ? "text-white" : "text-gray-400"}`}
+                        onClick={() => {
+                          setOrderType("market");
+                          setSliderPosition(0);
+                          setPrice(""); // Clear price when switching to market
+                        }}
+                      >
+                        Market
+                      </button>
+                      <button
+                        className={`flex-1 py-2 text-sm font-medium transition-colors outline-none relative
+                          ${orderType === "limit" ? "text-white" : "text-gray-400"}`}
+                        onClick={() => {
+                          setOrderType("limit");
+                          setSliderPosition(50);
+                        }}
+                      >
+                        Limit
+                      </button>
+                      {/* Sliding indicator */}
+                      <div 
+                        className="absolute bottom-0 h-0.5 bg-fuel-green transition-all duration-300 ease-in-out"
+                        style={{ 
+                          width: '50%',
+                          left: `${sliderPosition}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Buy/Sell Buttons */}
+                  <div className="flex mb-3">
                     <button
-                      className={`flex-1 py-1 text-[10px] font-medium rounded-l transition-colors outline-none
+                      className={`flex-1 py-1 text-sm font-medium rounded-l transition-colors outline-none
                         ${
                           tradeType === "buy"
                             ? "bg-fuel-green text-fuel-dark-900"
@@ -2100,7 +2138,7 @@ function App() {
                       BUY
                     </button>
                     <button
-                      className={`flex-1 py-1 text-[10px] font-medium rounded-r transition-colors outline-none
+                      className={`flex-1 py-1 text-sm font-medium rounded-r transition-colors outline-none
                         ${
                           tradeType === "sell"
                             ? "bg-red-500 text-white"
@@ -2112,73 +2150,33 @@ function App() {
                     </button>
                   </div>
 
-                  {/* Order Form - More compact */}
-                  <div className="space-y-2">
-                    <div>
-                      <div className="flex justify-between text-[10px] mb-1">
-                        <span className="text-gray-400">Order type</span>
-                        {orderType === "limit" && (
+                  {/* Rest of the order form */}
+                  <div className="space-y-3">
+                    {/* Show price input only for limit orders */}
+                    {orderType === "limit" && (
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
                           <span className="text-gray-400">Price</span>
-                        )}
-                      </div>
-                      <div className="flex space-x-2">
-                        <div className="flex-1 relative">
-                          <button
-                            className="w-full bg-fuel-dark-700 rounded p-1.5 text-[10px] text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors outline-none"
-                            onClick={() => setIsOrderTypeOpen(!isOrderTypeOpen)}
-                          >
-                            <span>{orderType.toUpperCase()}</span>
-                            <ChevronDown
-                              className={`h-3 w-3 text-gray-400 transition-transform ${
-                                isOrderTypeOpen ? "rotate-180" : ""
-                              }`}
-                            />
-                          </button>
-                          {isOrderTypeOpen && (
-                            <div className="absolute top-full left-0 w-full mt-1 bg-fuel-dark-700 rounded shadow-lg border border-fuel-dark-600 z-10">
-                              <button
-                                className="w-full p-1.5 text-[10px] text-left hover:bg-fuel-dark-600 transition-colors outline-none"
-                                onClick={() => {
-                                  setOrderType("limit");
-                                  setIsOrderTypeOpen(false);
-                                }}
-                              >
-                                LIMIT
-                              </button>
-                              <button
-                                className="w-full p-1.5 text-[10px] text-left hover:bg-fuel-dark-600 transition-colors outline-none"
-                                onClick={() => {
-                                  setOrderType("market");
-                                  setIsOrderTypeOpen(false);
-                                  setPrice("");
-                                }}
-                              >
-                                MARKET
-                              </button>
-                            </div>
-                          )}
                         </div>
-                        {orderType === "limit" && (
-                          <input
-                            type="number"
-                            className="flex-1 bg-fuel-dark-700 rounded p-1.5 text-[10px]"
-                            placeholder="0.00"
-                            value={price}
-                            onChange={(e) => setPrice(e.target.value)}
-                          />
-                        )}
+                        <input
+                          type="number"
+                          className="w-full bg-fuel-dark-700 rounded p-2 text-sm"
+                          placeholder="0.00"
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                        />
                       </div>
-                    </div>
-
+                    )}
+                    
                     <div>
-                      <div className="flex justify-between text-[10px] mb-1">
+                      <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-400">Order size</span>
                         <span className="text-gray-400">MAX</span>
                       </div>
                       <div className="flex space-x-2">
                         <input
                           type="number"
-                          className="flex-1 bg-fuel-dark-700 rounded p-1.5 text-[10px] hover:bg-fuel-dark-600 transition-colors"
+                          className="flex-1 bg-fuel-dark-700 rounded p-2 text-sm hover:bg-fuel-dark-600 transition-colors"
                           placeholder="0.00"
                           value={size}
                           onChange={(e) => setSize(e.target.value)}
@@ -2186,10 +2184,8 @@ function App() {
                         />
                         <div className="relative">
                           <button
-                            className="w-fit bg-fuel-dark-700 rounded p-1.5 text-[10px] text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors outline-none"
-                            onClick={() =>
-                              setIsTokenSelectOpen(!isTokenSelectOpen)
-                            }
+                            className="w-fit bg-fuel-dark-700 rounded p-2 text-sm text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors outline-none"
+                            onClick={() => setIsTokenSelectOpen(!isTokenSelectOpen)}
                           >
                             <span>{getCurrentPairTokens().baseAsset}</span>
                           </button>
@@ -2197,22 +2193,16 @@ function App() {
                       </div>
                     </div>
 
-                    <div className="mt-3">
+                    <div className="mt-4">
                       <button
-                        className={`w-full py-1.5 text-[10px] font-medium rounded transition-colors outline-none
+                        className={`w-full py-2.5 text-sm font-medium rounded transition-colors outline-none
                           ${
-                            (
-                              orderType === "market"
-                                ? Boolean(size)
-                                : Boolean(price && size)
-                            )
+                            (orderType === "market" ? Boolean(size) : Boolean(price && size))
                               ? "bg-fuel-green text-fuel-dark-900 hover:bg-opacity-90"
                               : "bg-fuel-green/50 text-fuel-dark-900 cursor-not-allowed"
                           }`}
                         onClick={handlePlaceOrder}
-                        disabled={
-                          orderType === "market" ? !size : !price || !size
-                        }
+                        disabled={orderType === "market" ? !size : !price || !size}
                       >
                         Place Order
                       </button>

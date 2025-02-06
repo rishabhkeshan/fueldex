@@ -26,6 +26,7 @@ interface Trade {
 interface UserOrder extends Order {
   status: 'open' | 'filled' | 'partial';
   filled?: number;
+  timestamp: number;
 }
 
 interface UserBalance {
@@ -205,6 +206,7 @@ function P2PComponent() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationInterval, setSimulationInterval] = useState<NodeJS.Timeout | null>(null);
   const [pairStats, setPairStats] = useState<Record<TradingPair, PairStats>>(initialPairStats);
+  const [activeTab, setActiveTab] = useState<'trades' | 'orders'>('trades');
 
   const getTokens = (pair: string) => {
     const [baseToken, quoteToken] = pair.split('/');
@@ -266,30 +268,34 @@ function P2PComponent() {
 
     if (matchingOrders.length > 0) {
       const matchedOrder = matchingOrders[0];
+      const matchAmount = Math.min(newOrder.amount, matchedOrder.amount);
+      
       const trade: Trade = {
         timestamp: new Date().toLocaleTimeString(),
         type: newOrder.type,
         pair: selectedPair,
         price: matchedOrder.price,
-        amount: Math.min(newOrder.amount, matchedOrder.amount),
-        total: Math.min(newOrder.amount, matchedOrder.amount) * matchedOrder.price
+        amount: matchAmount,
+        total: matchAmount * matchedOrder.price
       };
 
       // Update recent trades
       setRecentTrades(prev => [trade, ...prev]);
 
-      // Update user orders
+      // Create user order with correct status
       const userOrder: UserOrder = {
         ...newOrder,
-        status: newOrder.amount > matchedOrder.amount ? 'partial' : 'filled',
-        filled: Math.min(newOrder.amount, matchedOrder.amount)
+        price: matchedOrder.price, // Use matched price
+        status: matchAmount < newOrder.amount ? 'partial' : 'filled',
+        filled: matchAmount,
+        timestamp: Date.now()
       };
       setUserOrders(prev => [userOrder, ...prev]);
 
       // Update the orderbook
       const updatedOrders = existingOrders.map(order => {
         if (order.id === matchedOrder.id) {
-          const remainingAmount = order.amount - trade.amount;
+          const remainingAmount = order.amount - matchAmount;
           if (remainingAmount <= 0) {
             return null; // Remove fully filled order
           }
@@ -313,25 +319,30 @@ function P2PComponent() {
   };
 
   const placeOrder = () => {
-    const newOrder: Order = {
+    if (!amount || !price) return;
+
+    const newOrder: UserOrder = {
       id: generateOrderId(),
+      type: isBuying ? 'buy' : 'sell',
       price: Number(price),
       amount: Number(amount),
       total: Number(price) * Number(amount),
-      type: isBuying ? 'buy' : 'sell',
+      status: 'open',
+      fillType: 'FULL',
       pair: selectedPair,
-      fillType: 'PARTIAL'
+      timestamp: Date.now(),
     };
 
     // Check if order can be matched
     const isMatched = matchOrder(newOrder);
 
-    // If not matched, add as new order
+    // Only add to orderbook and user orders if not matched
     if (!isMatched) {
       const userOrder: UserOrder = {
         ...newOrder,
         status: 'open',
-        filled: 0
+        filled: 0,
+        timestamp: Date.now()
       };
       setUserOrders(prev => [userOrder, ...prev]);
 
@@ -714,66 +725,179 @@ function P2PComponent() {
             </div>
           </div>
 
-          {/* Recent Trades - update height and make scrollable */}
+          {/* Recent Trades Section */}
           <div className="h-[250px] min-h-[250px] border-t border-fuel-dark-600 flex flex-col flex-shrink-0">
-            <div className="text-sm font-medium p-4 border-b border-fuel-dark-600 bg-fuel-dark-800 flex items-center justify-between flex-shrink-0">
-              <span>Recent Trades</span>
-              <span className="text-xs text-gray-400">Last 50 trades</span>
+            {/* Tab Navigation */}
+            <div className="flex items-center space-x-2 px-4 py-3 border-b border-fuel-dark-600 bg-fuel-dark-800">
+              <button
+                className={`text-sm font-medium transition-colors outline-none
+                  ${activeTab === "trades" ? "text-fuel-green" : "text-gray-400 hover:text-gray-300"}`}
+                onClick={() => setActiveTab("trades")}
+              >
+                Recent Trades
+              </button>
+              <span className="text-gray-600">|</span>
+              <button
+                className={`text-sm font-medium transition-colors outline-none
+                  ${activeTab === "orders" ? "text-fuel-green" : "text-gray-400 hover:text-gray-300"}`}
+                onClick={() => setActiveTab("orders")}
+              >
+                My Orders ({userOrders.length})
+              </button>
             </div>
-            <div className="flex-1 p-4 overflow-auto scrollbar-thin scrollbar-thumb-fuel-dark-700 scrollbar-track-transparent hover:scrollbar-thumb-fuel-dark-600">
-              <div className="grid grid-cols-6 text-xs text-gray-400 mb-3 px-2">
-                <div>Time</div>
-                <div>Type</div>
-                <div>Pair</div>
-                <div className="text-right">Price</div>
-                <div className="text-right">Amount</div>
-                <div className="text-right">Total</div>
-              </div>
-              <div className="space-y-1">
-                {recentTrades.map((trade, index) => (
-                  <div 
-                    key={index} 
-                    className="grid grid-cols-6 text-sm items-center hover:bg-fuel-dark-700/50 px-2 py-2.5 rounded transition-colors"
-                  >
-                    <div className="text-gray-400 font-mono text-xs">{trade.timestamp}</div>
-                    <div>
-                      <span className={`px-2 py-0.5 rounded-sm text-xs font-medium ${
-                        trade.type === 'buy' 
-                          ? 'bg-green-500/10 text-green-400' 
-                          : 'bg-red-500/10 text-red-400'
-                      }`}>
-                        {trade.type === 'buy' ? 'BUY' : 'SELL'}
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-1.5">
-                      <div className="flex -space-x-1.5">
-                        <img 
-                          src={getTokenIcon(trade.pair.split('/')[0])} 
-                          className="w-4 h-4 rounded-full ring-1 ring-fuel-dark-800" 
-                          alt={trade.pair.split('/')[0]} 
-                        />
-                        <img 
-                          src={getTokenIcon(trade.pair.split('/')[1])} 
-                          className="w-4 h-4 rounded-full ring-1 ring-fuel-dark-800 relative z-10" 
-                          alt={trade.pair.split('/')[1]} 
-                        />
-                      </div>
-                      <span className="text-xs">{trade.pair}</span>
-                    </div>
-                    <div className={`text-right font-mono text-xs ${
-                      trade.type === 'buy' ? 'text-green-400' : 'text-red-400'
-                    }`}>
-                      {trade.price.toFixed(2)}
-                    </div>
-                    <div className="text-right font-mono text-xs">
-                      {trade.amount.toFixed(4)}
-                    </div>
-                    <div className="text-right font-mono text-xs text-gray-400">
-                      {trade.total.toFixed(2)}
-                    </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-fuel-dark-700 scrollbar-track-transparent hover:scrollbar-thumb-fuel-dark-600">
+              {activeTab === 'trades' ? (
+                // Recent Trades Content
+                <div className="p-4">
+                  <div className="grid grid-cols-6 text-xs text-gray-400 mb-3 px-2">
+                    <div>Time</div>
+                    <div>Type</div>
+                    <div>Pair</div>
+                    <div className="text-right">Price</div>
+                    <div className="text-right">Amount</div>
+                    <div className="text-right">Total</div>
                   </div>
-                ))}
-              </div>
+                  <div className="space-y-1">
+                    {recentTrades.map((trade, index) => (
+                      <div 
+                        key={index} 
+                        className="grid grid-cols-6 text-sm items-center hover:bg-fuel-dark-700/50 px-2 py-2.5 rounded transition-colors"
+                      >
+                        <div className="text-gray-400 font-mono text-xs">{trade.timestamp}</div>
+                        <div>
+                          <span className={`px-2 py-0.5 rounded-sm text-xs font-medium ${
+                            trade.type === 'buy' 
+                              ? 'bg-green-500/10 text-green-400' 
+                              : 'bg-red-500/10 text-red-400'
+                          }`}>
+                            {trade.type === 'buy' ? 'BUY' : 'SELL'}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          <div className="flex -space-x-1.5">
+                            <img 
+                              src={getTokenIcon(trade.pair.split('/')[0])} 
+                              className="w-4 h-4 rounded-full ring-1 ring-fuel-dark-800" 
+                              alt={trade.pair.split('/')[0]} 
+                            />
+                            <img 
+                              src={getTokenIcon(trade.pair.split('/')[1])} 
+                              className="w-4 h-4 rounded-full ring-1 ring-fuel-dark-800 relative z-10" 
+                              alt={trade.pair.split('/')[1]} 
+                            />
+                          </div>
+                          <span className="text-xs">{trade.pair}</span>
+                        </div>
+                        <div className={`text-right font-mono text-xs ${
+                          trade.type === 'buy' ? 'text-green-400' : 'text-red-400'
+                        }`}>
+                          {trade.price.toFixed(2)}
+                        </div>
+                        <div className="text-right font-mono text-xs">
+                          {trade.amount.toFixed(4)}
+                        </div>
+                        <div className="text-right font-mono text-xs text-gray-400">
+                          {trade.total.toFixed(2)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                // My Orders Content
+                <div className="p-4">
+                  <div className="grid grid-cols-7 text-xs text-gray-400 mb-3 px-2">
+                    <div>Date</div>
+                    <div>Type</div>
+                    <div>Pair</div>
+                    <div className="text-right">Price</div>
+                    <div className="text-right">Amount</div>
+                    <div className="text-right">Filled</div>
+                    <div className="text-right">Status</div>
+                  </div>
+                  {userOrders.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-[150px] text-gray-400">
+                      <span className="text-sm">No orders found</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {userOrders.map((order) => (
+                        <div 
+                          key={order.id}
+                          className="grid grid-cols-7 text-sm items-center hover:bg-fuel-dark-700/50 px-2 py-2.5 rounded transition-colors"
+                        >
+                          <div className="text-gray-400 font-mono text-xs">
+                            {(() => {
+                              const orderDate = new Date(order.timestamp);
+                              const today = new Date();
+                              const isToday = orderDate.toDateString() === today.toDateString();
+
+                              if (isToday) {
+                                return orderDate.toLocaleTimeString(undefined, {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                });
+                              }
+
+                              return orderDate.toLocaleString(undefined, {
+                                year: '2-digit',
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              });
+                            })()}
+                          </div>
+                          <div>
+                            <span className={`px-2 py-0.5 rounded-sm text-xs font-medium ${
+                              order.type === 'buy' 
+                                ? 'bg-green-500/10 text-green-400' 
+                                : 'bg-red-500/10 text-red-400'
+                            }`}>
+                              {order.type === 'buy' ? 'BUY' : 'SELL'}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1.5">
+                            <div className="flex -space-x-1.5">
+                              <img 
+                                src={getTokenIcon(order.pair.split('/')[0])} 
+                                className="w-4 h-4 rounded-full ring-1 ring-fuel-dark-800" 
+                                alt={order.pair.split('/')[0]} 
+                              />
+                              <img 
+                                src={getTokenIcon(order.pair.split('/')[1])} 
+                                className="w-4 h-4 rounded-full ring-1 ring-fuel-dark-800 relative z-10" 
+                                alt={order.pair.split('/')[1]} 
+                              />
+                            </div>
+                            <span className="text-xs">{order.pair}</span>
+                          </div>
+                          <div className="text-right font-mono text-xs">
+                            {order.price.toFixed(2)}
+                          </div>
+                          <div className="text-right font-mono text-xs">
+                            {order.amount.toFixed(4)}
+                          </div>
+                          <div className="text-right font-mono text-xs">
+                            {(order.filled || 0).toFixed(4)}
+                          </div>
+                          <div className="text-right">
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              order.status === 'filled' ? 'bg-green-500/20 text-green-400' :
+                              order.status === 'partial' ? 'bg-yellow-500/20 text-yellow-400' :
+                              'bg-blue-500/20 text-blue-400'
+                            }`}>
+                              {order.status.toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -902,81 +1026,6 @@ function P2PComponent() {
             >
               Place Order
             </button>
-          </div>
-
-          {/* My Orders Section - make it scrollable */}
-          <div className="border-t border-fuel-dark-600 mt-4 flex-1 min-h-[200px] overflow-hidden flex flex-col">
-            <div className="p-4 flex flex-col h-full">
-              <div className="flex items-center space-x-2 mb-4 flex-shrink-0">
-                <span className="text-sm font-medium">My Orders</span>
-                <span className="w-5 h-5 rounded-full bg-fuel-dark-700 flex items-center justify-center text-xs">
-                  {userOrders.length}
-                </span>
-              </div>
-
-              {userOrders.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center min-h-[150px] text-gray-400">
-                  <div className="w-12 h-12 mb-4 bg-fuel-dark-700 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/>
-                      <path d="M7 12h2v5H7zm4-3h2v8h-2zm4-3h2v11h-2z"/>
-                    </svg>
-                  </div>
-                  <span className="text-sm">No Order Found</span>
-                </div>
-              ) : (
-                <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-fuel-dark-700 scrollbar-track-transparent hover:scrollbar-thumb-fuel-dark-600">
-                  <table className="w-full">
-                    <thead className="text-xs text-gray-400">
-                      <tr className="border-b border-fuel-dark-600">
-                        <th className="pb-2 text-left font-medium">Type</th>
-                        <th className="pb-2 text-right font-medium">Price</th>
-                        <th className="pb-2 text-right font-medium">Amount</th>
-                        <th className="pb-2 text-right font-medium">Filled</th>
-                        <th className="pb-2 text-right font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-sm">
-                      {userOrders.map((order) => (
-                        <tr 
-                          key={order.id}
-                          className="border-b border-fuel-dark-600/50 hover:bg-fuel-dark-700/50"
-                        >
-                          <td className="py-3">
-                            <span className="flex items-center space-x-1">
-                              <span>{baseToken}</span>
-                              <span className={order.type === 'buy' ? 'text-green-400' : 'text-red-400'}>
-                                {order.type === 'buy' ? 'B' : 'S'}
-                              </span>
-                            </span>
-                          </td>
-                          <td className="py-3 text-right font-mono">
-                            {order.price.toFixed(2)}
-                          </td>
-                          <td className="py-3 text-right font-mono">
-                            {order.amount.toFixed(4)}
-                          </td>
-                          <td className="py-3 text-right font-mono">
-                            {(order.filled || 0).toFixed(4)}
-                          </td>
-                          <td className="py-3 text-right">
-                            <span className={`text-xs px-2 py-1 rounded inline-block min-w-[30px] text-center ${
-                              order.status === 'filled' ? 'bg-green-500/20 text-green-400' :
-                              order.status === 'partial' ? 'bg-yellow-500/20 text-yellow-400' :
-                              'bg-blue-500/20 text-blue-400'
-                            }`}>
-                              {order.status === 'filled' ? 'F' : 
-                               order.status === 'partial' ? 'P' : 
-                               'O'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
