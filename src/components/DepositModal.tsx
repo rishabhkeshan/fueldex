@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { X, ChevronDown, Info } from 'lucide-react';
+import { X, ChevronDown, Info, LogOut } from 'lucide-react';
+import arbitrumLogo from '../assets/arbitrum.svg';
+import baseLogo from '../assets/base.svg';
+import optimismLogo from '../assets/optimism.svg';
+import ethLogo from '../assets/eth.svg';
+import usdcLogo from '../assets/usdc.svg';
+import usdtLogo from '../assets/usdt.svg';
+import wstethLogo from '../assets/wsteth.svg';
+import weethLogo from '../assets/weETH.webp';
+import solvbtcLogo from '../assets/solvBTC.webp';
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 interface DepositModalProps {
   isOpen: boolean;
@@ -22,29 +32,29 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
   if (!isOpen) return null;
 
   const networks = [
-    { id: 'ethereum', name: 'ETHEREUM', icon: 'Ξ', color: 'bg-blue-500' },
-    { id: 'arbitrum', name: 'ARBITRUM', icon: 'A', color: 'bg-blue-600' },
-    { id: 'base', name: 'BASE', icon: 'B', color: 'bg-blue-700' },
-    { id: 'optimism', name: 'OPTIMISM', icon: 'O', color: 'bg-red-500' },
+    { id: 'ethereum', name: 'ETHEREUM', icon: ethLogo, color: 'bg-blue-500' },
+    { id: 'arbitrum', name: 'ARBITRUM', icon: arbitrumLogo, color: 'bg-blue-600' },
+    { id: 'base', name: 'BASE', icon: baseLogo, color: 'bg-blue-700' },
+    { id: 'optimism', name: 'OPTIMISM', icon: optimismLogo, color: 'bg-red-500' },
   ];
 
   const tokens = [
-    { symbol: 'USDC', icon: '$', color: 'bg-blue-400' },
-    { symbol: 'USDT', icon: '$', color: 'bg-green-400' },
-    { symbol: 'ETH', icon: 'Ξ', color: 'bg-blue-500' },
-    { symbol: 'wstETH', icon: 'w', color: 'bg-blue-600' },
-    { symbol: 'weETH', icon: 'w', color: 'bg-blue-700' },
-    { symbol: 'WBTC', icon: '₿', color: 'bg-orange-500' },
-    { symbol: 'LBTC', icon: 'L', color: 'bg-yellow-500' },
+    { symbol: 'USDC', icon: usdcLogo, color: 'bg-blue-400' },
+    { symbol: 'USDT', icon: usdtLogo, color: 'bg-green-400' },
+    { symbol: 'ETH', icon: ethLogo, color: 'bg-blue-500' },
+    { symbol: 'wstETH', icon: wstethLogo, color: 'bg-blue-600' },
+    { symbol: 'weETH', icon: weethLogo, color: 'bg-blue-700' },
+    { symbol: 'solvBTC', icon: solvbtcLogo, color: 'bg-orange-500' },
+    // { symbol: 'LBTC', icon: 'L', color: 'bg-yellow-500' },
   ];
 
   const quickTokensData: QuickToken[] = [
-    { symbol: 'USDC', icon: '$', color: 'bg-blue-400' },
-    { symbol: 'USDT', icon: '$', color: 'bg-green-400' },
-    { symbol: 'ETH', icon: 'Ξ', color: 'bg-blue-500' },
-    { symbol: 'wstETH', icon: 'w', color: 'bg-blue-600' },
-    { symbol: 'weETH', icon: 'w', color: 'bg-blue-700' },
-    { symbol: 'WBTC', icon: '₿', color: 'bg-orange-500' },
+    { symbol: 'USDC', icon: usdcLogo, color: 'bg-blue-400' },
+    { symbol: 'USDT', icon: usdtLogo, color: 'bg-green-400' },
+    { symbol: 'ETH', icon: ethLogo, color: 'bg-blue-500' },
+    { symbol: 'wstETH', icon: wstethLogo, color: 'bg-blue-600' },
+    { symbol: 'weETH', icon: weethLogo, color: 'bg-blue-700' },
+    { symbol: 'solvBTC', icon: solvbtcLogo, color: 'bg-orange-500' },
     // { symbol: 'LBTC', icon: 'L', color: 'bg-yellow-500' },
     // { symbol: 'cbBTC', icon: 'c', color: 'bg-purple-500' },
     // { symbol: 'sDAI', icon: 'D', color: 'bg-yellow-600' },
@@ -81,8 +91,12 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
                 onClick={() => setIsNetworkOpen(!isNetworkOpen)}
               >
                 <div className="flex items-center space-x-2.5">
-                  <div className={`w-6 h-6 rounded-full ${networks.find(n => n.name === selectedNetwork)?.color} flex items-center justify-center`}>
-                    <span className="text-white text-sm font-medium">{networks.find(n => n.name === selectedNetwork)?.icon}</span>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center">
+                    <img 
+                      src={networks.find(n => n.name === selectedNetwork)?.icon} 
+                      alt={selectedNetwork}
+                      className="w-5 h-5"
+                    />
                   </div>
                   <span className="font-medium text-sm">{selectedNetwork}</span>
                 </div>
@@ -100,8 +114,12 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
                         setIsNetworkOpen(false);
                       }}
                     >
-                      <div className={`w-6 h-6 rounded-full ${network.color} flex items-center justify-center`}>
-                        <span className="text-white text-sm font-medium">{network.icon}</span>
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center">
+                        <img 
+                          src={network.icon} 
+                          alt={network.name}
+                          className="w-5 h-5"
+                        />
                       </div>
                       <span className="font-medium text-sm">{network.name}</span>
                     </button>
@@ -123,8 +141,12 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
                 onClick={() => setIsTokenOpen(!isTokenOpen)}
               >
                 <div className="flex items-center space-x-2.5">
-                  <div className={`w-6 h-6 rounded-full ${tokens.find(t => t.symbol === selectedToken)?.color} flex items-center justify-center`}>
-                    <span className="text-white text-sm font-medium">{tokens.find(t => t.symbol === selectedToken)?.icon}</span>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center">
+                    <img 
+                      src={tokens.find(t => t.symbol === selectedToken)?.icon} 
+                      alt={selectedToken}
+                      className="w-5 h-5 rounded-full"
+                    />
                   </div>
                   <span className="font-medium text-sm">{selectedToken}</span>
                 </div>
@@ -143,8 +165,12 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
                         : 'bg-fuel-dark-700 text-gray-400 hover:bg-fuel-dark-600 hover:text-gray-300'
                     }`}
                   >
-                    <div className={`w-3.5 h-3.5 rounded-full ${token.color} flex items-center justify-center`}>
-                      <span className="text-white text-xs">{token.icon}</span>
+                    <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center">
+                      <img 
+                        src={token.icon} 
+                        alt={token.symbol}
+                        className="w-3.5 h-3.5 rounded-full"
+                      />
                     </div>
                     <span className="text-xs">{token.symbol}</span>
                   </button>
@@ -195,20 +221,47 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
           </div>
 
           {/* Connect Button - Adjusted padding */}
-          <button className="w-full py-3 relative group">
-            {/* Gradient background with animated hover */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#00FFA3] via-[#00FFD1] to-[#00D1FF] rounded-xl opacity-100 group-hover:opacity-90 transition-opacity" />
-            
-            {/* Glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#00FFA3] via-[#00FFD1] to-[#00D1FF] rounded-xl blur-xl opacity-30 group-hover:opacity-40 transition-opacity" />
-            
-            {/* Button content */}
-            <div className="relative flex items-center justify-center space-x-2">
-              <span className="text-fuel-dark-900 font-semibold tracking-wide text-sm sm:text-base">
-                Connect Ethereum Wallet
-              </span>
-            </div>
-          </button>
+          <ConnectButton.Custom>
+            {({
+              account,
+              chain,
+              openAccountModal,
+              openChainModal,
+              openConnectModal,
+              mounted,
+            }) => {
+              const ready = mounted;
+              if (!ready) return null;
+
+              return (
+                <button 
+                  onClick={account?.address ? openAccountModal : openConnectModal}
+                  className="w-full py-3 relative group"
+                >
+                  {/* Gradient background with animated hover */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#00FFA3] via-[#00FFD1] to-[#00D1FF] rounded-xl opacity-100 group-hover:opacity-90 transition-opacity" />
+                  
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#00FFA3] via-[#00FFD1] to-[#00D1FF] rounded-xl blur-xl opacity-30 group-hover:opacity-40 transition-opacity" />
+                  
+                  {/* Button content */}
+                  <div className="relative flex items-center justify-center space-x-2">
+                    <span className="text-fuel-dark-900 font-semibold tracking-wide text-sm sm:text-base">
+                      {account?.address 
+                        ? `Connected to ${account.address.slice(0, 6)}...${account.address.slice(-4)}`
+                        : 'Connect Wallet'
+                      }
+                    </span>
+                    {account?.address && (
+                      <LogOut 
+                        className="w-4 h-4 text-fuel-dark-900 opacity-70 group-hover:opacity-100 transition-opacity" 
+                      />
+                    )}
+                  </div>
+                </button>
+              );
+            }}
+          </ConnectButton.Custom>
         </div>
       </div>
     </div>
