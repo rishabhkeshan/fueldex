@@ -14,6 +14,7 @@ import USDCIcon from './assets/usdc.svg';
 import USDTIcon from './assets/usdt.svg';
 import OrderConfirmationModal from './components/OrderConfirmationModal';
 import TradingViewAdvancedWidget from './components/TradingViewAdvancedWidget';
+import Portfolio from './components/Portfolio';
 
 // Add these constants at the top after imports
 const PAIR_PRICE_RANGES = {
@@ -366,6 +367,77 @@ const calculatePriceStats = (trades: Trade[]) => {
   };
 };
 
+// Add this type near the top with other types
+interface Balances {
+  available: {
+    ETH: number;
+    USDT: number;
+    USDC: number;
+  };
+  inOrders: {
+    ETH: number;
+    USDT: number;
+    USDC: number;
+  };
+  total: {
+    ETH: number;
+    USDT: number;
+    USDC: number;
+  };
+}
+
+// Add this function to check if an order can be placed based on available balance
+const checkBalance = (
+  type: 'buy' | 'sell',
+  size: number,
+  price: number,
+  pair: string,
+  balances: Balances
+): { hasBalance: boolean; error?: string } => {
+  const [baseAsset, quoteAsset] = pair.split('/');
+  
+  if (type === 'buy') {
+    const requiredQuote = size * price;
+    const availableQuote = balances.available[quoteAsset as keyof typeof balances.available];
+    
+    if (availableQuote < requiredQuote) {
+      return {
+        hasBalance: false,
+        error: `Insufficient ${quoteAsset} balance. Required: ${requiredQuote.toFixed(2)}, Available: ${availableQuote.toFixed(2)}`
+      };
+    }
+  } else {
+    const availableBase = balances.available.ETH;
+    if (availableBase < size) {
+      return {
+        hasBalance: false,
+        error: `Insufficient ${baseAsset} balance. Required: ${size.toFixed(6)}, Available: ${availableBase.toFixed(6)}`
+      };
+    }
+  }
+  
+  return { hasBalance: true };
+};
+
+// Add this type near other interfaces
+interface AssetBalances {
+  available: {
+    ETH: number;
+    USDT: number;
+    USDC: number;
+  };
+  inOrders: {
+    ETH: number;
+    USDT: number;
+    USDC: number;
+  };
+  total: {
+    ETH: number;
+    USDT: number;
+    USDC: number;
+  };
+}
+
 function App() {
   const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
   const [size, setSize] = useState<string>('');
@@ -374,7 +446,7 @@ function App() {
   const [activeView, setActiveView] = useState<'orderbook' | 'trades' | 'chart'>('orderbook');
   const [isOrderTypeOpen, setIsOrderTypeOpen] = useState(false);
   const [isTokenSelectOpen, setIsTokenSelectOpen] = useState(false);
-  const [activeScreen, setActiveScreen] = useState<'terminal' | 'swap' | 'p2p'>('terminal');
+  const [activeScreen, setActiveScreen] = useState<'terminal' | 'swap' | 'p2p' | 'portfolio'>('terminal');
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [mobileView, setMobileView] = useState<'chart' | 'orderbook' | 'trades'>('chart');
   const [mobileBottomView, setMobileBottomView] = useState<'orders' | 'history'>('orders');
@@ -582,8 +654,144 @@ function App() {
     return { baseAsset, quoteAsset };
   }, [selectedPair]);
 
+  // Add this type near the top with other types
+  interface Balances {
+    available: {
+      ETH: number;
+      USDT: number;
+      USDC: number;
+    };
+    inOrders: {
+      ETH: number;
+      USDT: number;
+      USDC: number;
+    };
+    total: {
+      ETH: number;
+      USDT: number;
+      USDC: number;
+    };
+  }
+
+  // Add this function to check if an order can be placed based on available balance
+  const checkBalance = (
+    type: 'buy' | 'sell',
+    size: number,
+    price: number,
+    pair: string,
+    balances: Balances
+  ): { hasBalance: boolean; error?: string } => {
+    const [baseAsset, quoteAsset] = pair.split('/');
+    
+    if (type === 'buy') {
+      const requiredQuote = size * price;
+      const availableQuote = balances.available[quoteAsset as keyof typeof balances.available];
+      
+      if (availableQuote < requiredQuote) {
+        return {
+          hasBalance: false,
+          error: `Insufficient ${quoteAsset} balance. Required: ${requiredQuote.toFixed(2)}, Available: ${availableQuote.toFixed(2)}`
+        };
+      }
+    } else {
+      const availableBase = balances.available.ETH;
+      if (availableBase < size) {
+        return {
+          hasBalance: false,
+          error: `Insufficient ${baseAsset} balance. Required: ${size.toFixed(6)}, Available: ${availableBase.toFixed(6)}`
+        };
+      }
+    }
+    
+    return { hasBalance: true };
+  };
+
+  // Add this with other state declarations
+  const [balances, setBalances] = useState<AssetBalances>({
+    available: {
+      ETH: 20,
+      USDT: 50000,
+      USDC: 50000
+    },
+    inOrders: {
+      ETH: 0,
+      USDT: 0,
+      USDC: 0
+    },
+    total: {
+      ETH: 20,
+      USDT: 50000,
+      USDC: 50000
+    }
+  });
+
+  // Add this function to update balances when trades occur
+  const updateBalances = useCallback((
+    type: 'buy' | 'sell',
+    quantity: number,
+    price: number,
+    pair: string,
+    isOrder: boolean = false
+  ) => {
+    const [baseAsset, quoteAsset] = pair.split('/');
+    
+    setBalances(prev => {
+      const newBalances = { ...prev };
+      
+      if (isOrder) {
+        // Update inOrders balances
+        if (type === 'buy') {
+          newBalances.inOrders[quoteAsset as keyof typeof newBalances.inOrders] += quantity * price;
+          newBalances.available[quoteAsset as keyof typeof newBalances.available] -= quantity * price;
+        } else {
+          newBalances.inOrders[baseAsset as keyof typeof newBalances.inOrders] += quantity;
+          newBalances.available[baseAsset as keyof typeof newBalances.available] -= quantity;
+        }
+      } else {
+        // Update available balances for executed trades
+        if (type === 'buy') {
+          newBalances.available[baseAsset as keyof typeof newBalances.available] += quantity;
+          newBalances.available[quoteAsset as keyof typeof newBalances.available] -= quantity * price;
+        } else {
+          newBalances.available[baseAsset as keyof typeof newBalances.available] -= quantity;
+          newBalances.available[quoteAsset as keyof typeof newBalances.available] += quantity * price;
+        }
+      }
+
+      // Recalculate totals
+      Object.keys(newBalances.total).forEach(asset => {
+        newBalances.total[asset as keyof typeof newBalances.total] = 
+          newBalances.available[asset as keyof typeof newBalances.available] +
+          newBalances.inOrders[asset as keyof typeof newBalances.inOrders];
+      });
+
+      return newBalances;
+    });
+  }, []);
+
+  // Update the handlePlaceOrder function
   const handlePlaceOrder = useCallback(() => {
     if (!size) return;
+    
+    const sizeNum = parseFloat(size);
+    const priceNum = orderType === 'market' ? 
+      (tradeType === 'buy' ? orderBook.asks[0]?.price : orderBook.bids[0]?.price) : 
+      parseFloat(price);
+
+    // Check balance before proceeding
+    const balanceCheck = checkBalance(
+      tradeType,
+      sizeNum,
+      priceNum,
+      selectedPair,
+      balances
+    );
+
+    if (!balanceCheck.hasBalance) {
+      // Show error message to user
+      alert(balanceCheck.error);
+      return;
+    }
     
     // Check if confirmation is disabled in localStorage
     const hideConfirmation = localStorage.getItem('hideOrderConfirmation') === 'true';
@@ -601,14 +809,34 @@ function App() {
     
     // Execute order logic here
     executeOrder();
-  }, [price, size, tradeType, orderType]);
+  }, [price, size, tradeType, orderType, selectedPair, orderBook, balances, updateBalances]);
 
+  // Update the executeOrder function
   const executeOrder = useCallback(() => {
     if (!size) return;
 
+    const sizeNum = parseFloat(size);
+    const priceNum = orderType === 'market' ? 
+      (tradeType === 'buy' ? orderBook.asks[0]?.price : orderBook.bids[0]?.price) : 
+      parseFloat(price);
+
+    // Check balance before proceeding
+    const balanceCheck = checkBalance(
+      tradeType,
+      sizeNum,
+      priceNum,
+      selectedPair,
+      balances
+    );
+
+    if (!balanceCheck.hasBalance) {
+      alert(balanceCheck.error);
+      return;
+    }
+
     if (orderType === 'market') {
       // For market orders, match against existing orderbook immediately
-      const sizeToFill = parseFloat(size);
+      const sizeToFill = sizeNum;
       let remainingSize = sizeToFill;
       const newTrades: Trade[] = [];
       const updatedOrders = { ...orderBook };
@@ -631,7 +859,8 @@ function App() {
           quantity: fillSize,
           time: new Date().toLocaleTimeString(),
           timestamp: Date.now(),
-          type: tradeType
+          type: tradeType,
+          pair: selectedPair
         };
         newTrades.push(trade);
 
@@ -678,64 +907,35 @@ function App() {
           timestamp: Date.now(),
           status: remainingSize === 0 ? 'filled' : 'partial',
           filled: sizeToFill - remainingSize,
-          completedAt: Date.now()
+          completedAt: Date.now(),
+          pair: selectedPair
         };
         setOrderHistory(prev => [historicalOrder, ...prev]);
+
+        // Update balances after trade execution
+        updateBalances(tradeType, sizeToFill - remainingSize, priceNum, selectedPair);
       }
     } else {
-      // Existing limit order logic
+      // Limit order logic
       if (!price) return;
 
-      const { trades: newTrades, updatedOrderBook, remainingOrder } = tradingService.createOrder(
-        tradeType,
-        parseFloat(price),
-        parseFloat(size),
-        orderBook
-      );
+      // Lock the funds first
+      updateBalances(tradeType, sizeNum, priceNum, selectedPair, true);
 
-      // Update orderbook
-      setOrderBook(updatedOrderBook);
+      // Create active order
+      const activeOrder: ActiveOrder = {
+        id: tradingService.generateOrderId(),
+        price: priceNum,
+        size: sizeNum,
+        total: priceNum * sizeNum,
+        type: tradeType,
+        timestamp: Date.now(),
+        status: 'open',
+        filled: 0,
+        pair: selectedPair
+      };
 
-      // Update trades
-      if (newTrades.length > 0) {
-        setTrades(prev => [...newTrades, ...prev].slice(0, 30));
-        
-        // Add user trade marker
-        const userTrade: UserTrade = {
-          price: parseFloat(price),
-          quantity: parseFloat(size),
-          time: new Date().toLocaleTimeString(),
-          timestamp: Date.now(),
-          type: tradeType,
-        };
-        setUserTrades(prev => [...prev, userTrade]);
-      }
-
-      // Add to active orders if partially filled or not filled at all
-      if (remainingOrder) {
-        const activeOrder: ActiveOrder = {
-          ...remainingOrder,
-          status: newTrades.length > 0 ? 'partial' : 'open',
-          filled: newTrades.reduce((acc, trade) => acc + trade.quantity, 0)
-        };
-        setActiveOrders(prev => [...prev, activeOrder]);
-      } 
-      
-      // Add to history if fully filled
-      if (newTrades.length > 0 && !remainingOrder) {
-        const historicalOrder: HistoricalOrder = {
-          id: tradingService.generateOrderId(),
-          price: parseFloat(price),
-          size: parseFloat(size),
-          total: parseFloat(price) * parseFloat(size),
-          type: tradeType,
-          timestamp: Date.now(),
-          status: 'filled',
-          filled: parseFloat(size),
-          completedAt: Date.now()
-        };
-        setOrderHistory(prev => [historicalOrder, ...prev]);
-      }
+      setActiveOrders(prev => [...prev, activeOrder]);
     }
 
     // Reset form
@@ -743,7 +943,17 @@ function App() {
     setSize('');
     setShowOrderConfirmation(false);
     setPendingOrder(null);
-  }, [price, size, tradeType, orderType, orderBook, tradingService]);
+  }, [
+    price, 
+    size, 
+    tradeType, 
+    orderType, 
+    selectedPair, 
+    orderBook, 
+    balances, 
+    updateBalances, 
+    tradingService
+  ]);
 
   // Update the cancel order function
   const handleCancelOrder = useCallback((orderId: string) => {
@@ -751,16 +961,34 @@ function App() {
       const orderToCancel = prev.find(order => order.id === orderId);
       if (!orderToCancel) return prev;
 
+      // Release locked balances
+      const [baseAsset, quoteAsset] = orderToCancel.pair.split('/');
+      if (orderToCancel.type === 'buy') {
+        setBalances(prev => {
+          const newBalances = { ...prev };
+          const lockedAmount = orderToCancel.size * orderToCancel.price;
+          newBalances.inOrders[quoteAsset as keyof typeof newBalances.inOrders] -= lockedAmount;
+          newBalances.available[quoteAsset as keyof typeof newBalances.available] += lockedAmount;
+          return newBalances;
+        });
+      } else {
+        setBalances(prev => {
+          const newBalances = { ...prev };
+          newBalances.inOrders[baseAsset as keyof typeof newBalances.inOrders] -= orderToCancel.size;
+          newBalances.available[baseAsset as keyof typeof newBalances.available] += orderToCancel.size;
+          return newBalances;
+        });
+      }
+
       // Add to history as cancelled
       const historicalOrder: HistoricalOrder = {
         ...orderToCancel,
         status: 'cancelled',
-        filled: orderToCancel.filled || 0, // Provide default value for filled
+        filled: orderToCancel.filled || 0,
         completedAt: Date.now()
       };
       setOrderHistory(prev => [historicalOrder, ...prev]);
 
-      // Remove from active orders
       return prev.filter(order => order.id !== orderId);
     });
   }, []);
@@ -873,7 +1101,8 @@ function App() {
         close,
         high,
         low,
-        volume
+        volume,
+        pair: selectedPair
       };
 
       newSimulatedTrades.push(newTrade);
@@ -933,7 +1162,8 @@ function App() {
           size: newSize,
           total: Number((newSize * newPrice).toFixed(5)),
           timestamp: Date.now(),
-          type: 'sell' as const
+          type: 'sell' as const,
+          pair: selectedPair
         };
       }
 
@@ -948,7 +1178,8 @@ function App() {
           size: newSize,
           total: Number((newSize * newPrice).toFixed(5)),
           timestamp: Date.now(),
-          type: 'buy' as const
+          type: 'buy' as const,
+          pair: selectedPair
         };
       }
 
@@ -958,7 +1189,8 @@ function App() {
 
       return {
         asks: newAsks,
-        bids: newBids
+        bids: newBids,
+        pair: selectedPair
       };
     });
   };
@@ -1017,14 +1249,17 @@ function App() {
             <div className="flex items-center space-x-2 sm:space-x-4">
               <button
                 className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
-                  ${
-                    activeScreen === "terminal"
-                      ? "bg-fuel-dark-700 text-fuel-green"
-                      : "text-gray-400 hover:text-gray-300"
-                  }`}
+                  ${activeScreen === "terminal" ? "bg-fuel-dark-700 text-fuel-green" : "text-gray-400 hover:text-gray-300"}`}
                 onClick={() => setActiveScreen("terminal")}
               >
                 Terminal
+              </button>
+              <button
+                className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
+                  ${activeScreen === "portfolio" ? "bg-fuel-dark-700 text-fuel-green" : "text-gray-400 hover:text-gray-300"}`}
+                onClick={() => setActiveScreen("portfolio")}
+              >
+                Portfolio
               </button>
               <button
                 className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
@@ -1320,7 +1555,7 @@ function App() {
                               <div className="text-gray-400">
                                 {new Date(order.timestamp).toLocaleTimeString()}
                               </div>
-                              <div>FUEL/USDT</div>
+                              <div>{order.pair}</div>
                               <div
                                 className={`${
                                   order.type === "buy"
@@ -1378,7 +1613,7 @@ function App() {
                             <div className="text-gray-400">
                               {new Date(order.completedAt).toLocaleTimeString()}
                             </div>
-                            <div>FUEL/USDT</div>
+                            <div>{order.pair}</div>
                             <div
                               className={`flex items-center space-x-2 ${
                                 order.type === "buy"
@@ -1992,7 +2227,7 @@ function App() {
                                     order.timestamp
                                   ).toLocaleTimeString()}
                                 </div>
-                                <div>FUEL/USDT</div>
+                                <div>{order.pair}</div>
                                 <div
                                   className={
                                     order.type === "buy"
@@ -2052,7 +2287,7 @@ function App() {
                                   order.completedAt
                                 ).toLocaleTimeString()}
                               </div>
-                              <div>FUEL/USDT</div>
+                              <div>{order.pair}</div>
                               <div
                                 className={`flex items-center space-x-2 ${
                                   order.type === "buy"
@@ -2214,8 +2449,17 @@ function App() {
           </>
         ) : activeScreen === "swap" ? (
           <SwapComponent />
-        ) : (
+        ) : activeScreen === "p2p" ? (
           <P2PComponent />
+        ) : (
+          <Portfolio 
+            trades={trades} 
+            userTrades={userTrades} 
+            activeOrders={activeOrders}
+            orderHistory={orderHistory}
+            onCancelOrder={handleCancelOrder}
+            balances={balances}
+          />
         )}
       </main>
 
