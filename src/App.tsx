@@ -1236,36 +1236,40 @@ function App() {
   // First, add this state for the slider animation
   const [sliderPosition, setSliderPosition] = useState(orderType === 'market' ? 0 : 50);
 
+  // Add this near your other state declarations
+  const [orderBookTradesSlider, setOrderBookTradesSlider] = useState(activeView === 'orderbook' ? 0 : 50);
+
   return (
     <div className="h-screen flex flex-col bg-fuel-dark-900 text-gray-100">
       {/* Header - Always visible */}
       <header className="border-b border-fuel-dark-600 bg-fuel-dark-800 py-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 space-y-2 sm:space-y-0">
-          <div className="flex items-center justify-between sm:space-x-8">
-            <div className="flex items-center space-x-1">
-              <img src={FuelLogo} alt="FUEL Logo" className="w-5 h-5 sm:w-7 sm:h-7 mt-1.5" />
-              <span className="text-base sm:text-lg font-bold">Order Book</span>
+          <div className="flex items-center justify-between sm:justify-start">
+            <div className="flex items-center space-x-1 mr-5">
+              <img
+                src={FuelLogo}
+                alt="FUEL Logo"
+                className="w-5 h-5 sm:w-7 sm:h-7 mt-1.5"
+              />
+              <span className="text-base sm:text-lg font-bold">O2.live</span>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
               <button
-                className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
-                  ${activeScreen === "terminal" ? "bg-fuel-dark-700 text-fuel-green" : "text-gray-400 hover:text-gray-300"}`}
+                className={`px-2 sm:px-3 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
+                  ${
+                    activeScreen === "terminal"
+                      ? "bg-inherit text-fuel-green"
+                      : "text-gray-400 hover:text-gray-300"
+                  }`}
                 onClick={() => setActiveScreen("terminal")}
               >
                 Terminal
               </button>
               <button
-                className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
-                  ${activeScreen === "portfolio" ? "bg-fuel-dark-700 text-fuel-green" : "text-gray-400 hover:text-gray-300"}`}
-                onClick={() => setActiveScreen("portfolio")}
-              >
-                Portfolio
-              </button>
-              <button
-                className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
+                className={`px-2 sm:px-3 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
                   ${
                     activeScreen === "swap"
-                      ? "bg-fuel-dark-700 text-fuel-green"
+                      ? "bg-inherit text-fuel-green"
                       : "text-gray-400 hover:text-gray-300"
                   }`}
                 onClick={() => setActiveScreen("swap")}
@@ -1273,10 +1277,10 @@ function App() {
                 Swap
               </button>
               <button
-                className={`px-3 sm:px-4 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
+                className={`px-2 sm:px-3 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
                   ${
                     activeScreen === "p2p"
-                      ? "bg-fuel-dark-700 text-fuel-green"
+                      ? "bg-inherit text-fuel-green"
                       : "text-gray-400 hover:text-gray-300"
                   }`}
                 onClick={() => setActiveScreen("p2p")}
@@ -1308,6 +1312,12 @@ function App() {
             )}
             <button
               className="px-3 sm:px-4 py-1.5 rounded bg-fuel-dark-700 text-gray-100 text-xs sm:text-sm hover:bg-fuel-dark-600 outline-none"
+              onClick={() => setActiveScreen("portfolio")}
+            >
+              Portfolio
+            </button>
+            <button
+              className="px-3 sm:px-4 py-1.5 rounded bg-fuel-dark-700 text-gray-100 text-xs sm:text-sm hover:bg-fuel-dark-600 outline-none"
               onClick={() => setIsDepositModalOpen(true)}
             >
               Deposit
@@ -1316,8 +1326,6 @@ function App() {
           </div>
         </div>
       </header>
-
-
 
       {/* Mobile Navigation Tabs */}
       {activeScreen === "terminal" && (
@@ -1794,28 +1802,40 @@ function App() {
               {/* Left section containing Chart, Orderbook/Trades, and Orders/History */}
               <div className="flex-1 flex flex-col">
                 {/* Top section with Chart and Orderbook/Trades */}
-                <div className="flex flex-1 overflow-hidden"> {/* Add overflow-hidden */}
+                <div className="flex flex-1 overflow-hidden">
+                  {" "}
+                  {/* Add overflow-hidden */}
                   {/* Chart */}
-                  <div className="flex-1 bg-fuel-dark-800 border-r border-fuel-dark-600 flex flex-col overflow-hidden"> {/* Add flex flex-col overflow-hidden */}
+                  <div className="flex-1 bg-fuel-dark-800 border-r border-fuel-dark-600 flex flex-col overflow-hidden">
+                    {" "}
+                    {/* Add flex flex-col overflow-hidden */}
                     {/* Add trading pair header */}
-                    <div className="shrink-0 p-3 border-b border-fuel-dark-600"> {/* Add shrink-0 */}
+                    <div className="shrink-0 p-3 border-b border-fuel-dark-600">
+                      {" "}
+                      {/* Add shrink-0 */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="flex items-center justify-between sm:justify-start">
                             <div className="relative">
                               <button
                                 className="flex items-center space-x-2 text-lg font-bold hover:bg-fuel-dark-700 rounded px-3 py-2 outline-none min-w-[200px]"
-                                onClick={() => setIsPairSelectOpen(!isPairSelectOpen)}
+                                onClick={() =>
+                                  setIsPairSelectOpen(!isPairSelectOpen)
+                                }
                               >
                                 <div className="flex items-center">
                                   <div className="flex -space-x-2 mr-2">
                                     <img
-                                      src={getTokenIcon(selectedPair.split("/")[0])}
+                                      src={getTokenIcon(
+                                        selectedPair.split("/")[0]
+                                      )}
                                       className="w-6 h-6 rounded-full ring-2 ring-fuel-dark-900"
                                       alt={selectedPair.split("/")[0]}
                                     />
                                     <img
-                                      src={getTokenIcon(selectedPair.split("/")[1])}
+                                      src={getTokenIcon(
+                                        selectedPair.split("/")[1]
+                                      )}
                                       className="w-6 h-6 rounded-full ring-2 ring-fuel-dark-900 relative z-10"
                                       alt={selectedPair.split("/")[1]}
                                     />
@@ -1838,7 +1858,9 @@ function App() {
                                       placeholder="Search pairs..."
                                       className="w-full bg-fuel-dark-700 rounded p-2 text-sm outline-none focus:ring-1 focus:ring-fuel-green"
                                       value={searchQuery}
-                                      onChange={(e) => setSearchQuery(e.target.value)}
+                                      onChange={(e) =>
+                                        setSearchQuery(e.target.value)
+                                      }
                                     />
                                   </div>
 
@@ -1847,18 +1869,25 @@ function App() {
                                     <div className="col-span-2">Asset Pair</div>
                                     <div className="text-right">Price</div>
                                     <div className="text-right">24h Change</div>
-                                    <div className="text-right">24h High/Low</div>
+                                    <div className="text-right">
+                                      24h High/Low
+                                    </div>
                                     <div className="text-right">24h Volume</div>
                                   </div>
 
                                   {/* Market pairs list */}
                                   <div className="max-h-[300px] overflow-y-auto">
-                                    {TRADING_PAIRS.filter(pair => 
-                                      pair.toLowerCase().includes(searchQuery.toLowerCase())
+                                    {TRADING_PAIRS.filter((pair) =>
+                                      pair
+                                        .toLowerCase()
+                                        .includes(searchQuery.toLowerCase())
                                     ).map((pair) => {
                                       const [base, quote] = pair.split("/");
-                                      const stats = priceStats[pair as keyof typeof priceStats];
-                                      
+                                      const stats =
+                                        priceStats[
+                                          pair as keyof typeof priceStats
+                                        ];
+
                                       return (
                                         <button
                                           key={pair}
@@ -1866,7 +1895,7 @@ function App() {
                                           onClick={() => {
                                             setSelectedPair(pair);
                                             setIsPairSelectOpen(false);
-                                            setSearchQuery('');
+                                            setSearchQuery("");
                                           }}
                                         >
                                           <div className="grid grid-cols-6 gap-4 items-center">
@@ -1885,7 +1914,9 @@ function App() {
                                                 />
                                               </div>
                                               <div>
-                                                <div className="font-medium text-sm">{pair}</div>
+                                                <div className="font-medium text-sm">
+                                                  {pair}
+                                                </div>
                                               </div>
                                             </div>
 
@@ -1895,22 +1926,36 @@ function App() {
                                             </div>
 
                                             {/* 24h Change */}
-                                            <div className={`text-right text-[11px] ${stats?.change >= 0 ? 'text-fuel-green' : 'text-red-400'}`}>
-                                              {stats?.change >= 0 ? '+' : ''}{stats?.change.toFixed(2)}%
+                                            <div
+                                              className={`text-right text-[11px] ${
+                                                stats?.change >= 0
+                                                  ? "text-fuel-green"
+                                                  : "text-red-400"
+                                              }`}
+                                            >
+                                              {stats?.change >= 0 ? "+" : ""}
+                                              {stats?.change.toFixed(2)}%
                                             </div>
 
                                             {/* 24h High/Low Combined */}
                                             <div className="text-right text-[11px] text-gray-200">
-                                              <div>${stats?.high.toFixed(2)}</div>
-                                              <div className="text-gray-400">${stats?.low.toFixed(2)}</div>
+                                              <div>
+                                                ${stats?.high.toFixed(2)}
+                                              </div>
+                                              <div className="text-gray-400">
+                                                ${stats?.low.toFixed(2)}
+                                              </div>
                                             </div>
 
                                             {/* 24h Volume */}
                                             <div className="text-right text-[11px] text-gray-200">
-                                              {(stats?.volume || 0).toLocaleString(undefined, {
+                                              {(
+                                                stats?.volume || 0
+                                              ).toLocaleString(undefined, {
                                                 minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2
-                                              })} {base}
+                                                maximumFractionDigits: 2,
+                                              })}{" "}
+                                              {base}
                                             </div>
                                           </div>
                                         </button>
@@ -1922,24 +1967,21 @@ function App() {
                             </div>
                           </div>
                           <div>
-                            <div className="text-lg font-bold">
-                              ${priceStats[selectedPair]?.last.toFixed(2)}
-                            </div>
+                            <div className="text-xs text-gray-400">Mark</div>
                             <div
-                              className={`text-xs ${
+                              className={`text-sm font-medium ${
                                 priceStats[selectedPair]?.change >= 0
                                   ? "text-fuel-green"
                                   : "text-red-400"
                               }`}
                             >
-                              {priceStats[selectedPair]?.change >= 0 ? "+" : ""}
-                              {priceStats[selectedPair]?.change.toFixed(2)}%
+                              ${priceStats[selectedPair]?.last.toFixed(2)}
                             </div>
                           </div>
-                        </div>
-                        <div className="flex gap-8 text-right px-3">
                           <div>
-                            <div className="text-xs text-gray-400">24h High</div>
+                            <div className="text-xs text-gray-400">
+                              24h High
+                            </div>
                             <div className="text-sm font-medium">
                               ${priceStats[selectedPair]?.high.toFixed(2)}
                             </div>
@@ -1951,17 +1993,21 @@ function App() {
                             </div>
                           </div>
                           <div>
-                            <div className="text-xs text-gray-400">24h Volume</div>
+                            <div className="text-xs text-gray-400">
+                              24h Volume
+                            </div>
                             <div className="text-sm font-medium">
                               {priceStats[selectedPair]?.volume.toFixed(2)}{" "}
                               {getCurrentPairTokens().baseAsset}
                             </div>
                           </div>
                         </div>
+                        <div className="flex gap-8 text-right px-3"></div>
                       </div>
                     </div>
-
-                    <div className="flex-1 overflow-hidden"> {/* Add wrapper div with flex-1 and overflow-hidden */}
+                    <div className="flex-1 overflow-hidden">
+                      {" "}
+                      {/* Add wrapper div with flex-1 and overflow-hidden */}
                       <TradingViewWidget
                         trades={trades}
                         userTrades={userTrades}
@@ -1970,11 +2016,10 @@ function App() {
                       />
                     </div>
                   </div>
-
                   {/* Order Book/Trades Column */}
                   <div className="w-[250px] flex flex-col min-h-0 border-r border-fuel-dark-600 bg-fuel-dark-800">
                     {/* Tabs for Orderbook/Trades */}
-                    <div className="flex border-b border-fuel-dark-600">
+                    <div className="flex border-b border-fuel-dark-600 relative">
                       <button
                         className={`flex-1 py-2 text-center text-xs font-medium transition-colors outline-none
                           ${
@@ -1982,7 +2027,10 @@ function App() {
                               ? "text-fuel-green"
                               : "text-gray-400"
                           }`}
-                        onClick={() => setActiveView("orderbook")}
+                        onClick={() => {
+                          setActiveView("orderbook");
+                          setOrderBookTradesSlider(0);
+                        }}
                       >
                         Order Book
                       </button>
@@ -1993,10 +2041,21 @@ function App() {
                               ? "text-fuel-green"
                               : "text-gray-400"
                           }`}
-                        onClick={() => setActiveView("trades")}
+                        onClick={() => {
+                          setActiveView("trades");
+                          setOrderBookTradesSlider(50);
+                        }}
                       >
                         Trades
                       </button>
+                      {/* Sliding indicator */}
+                      <div
+                        className="absolute bottom-0 h-0.5 bg-fuel-green transition-all duration-300 ease-in-out"
+                        style={{
+                          width: "50%",
+                          left: `${orderBookTradesSlider}%`,
+                        }}
+                      />
                     </div>
 
                     {/* Content */}
@@ -2329,7 +2388,11 @@ function App() {
                     <div className="flex relative">
                       <button
                         className={`flex-1 py-2 text-sm font-medium transition-colors outline-none relative
-                          ${orderType === "market" ? "text-white" : "text-gray-400"}`}
+                          ${
+                            orderType === "market"
+                              ? "text-white"
+                              : "text-gray-400"
+                          }`}
                         onClick={() => {
                           setOrderType("market");
                           setSliderPosition(0);
@@ -2340,7 +2403,11 @@ function App() {
                       </button>
                       <button
                         className={`flex-1 py-2 text-sm font-medium transition-colors outline-none relative
-                          ${orderType === "limit" ? "text-white" : "text-gray-400"}`}
+                          ${
+                            orderType === "limit"
+                              ? "text-white"
+                              : "text-gray-400"
+                          }`}
                         onClick={() => {
                           setOrderType("limit");
                           setSliderPosition(50);
@@ -2349,11 +2416,11 @@ function App() {
                         Limit
                       </button>
                       {/* Sliding indicator */}
-                      <div 
+                      <div
                         className="absolute bottom-0 h-0.5 bg-fuel-green transition-all duration-300 ease-in-out"
-                        style={{ 
-                          width: '50%',
-                          left: `${sliderPosition}%`
+                        style={{
+                          width: "50%",
+                          left: `${sliderPosition}%`,
                         }}
                       />
                     </div>
@@ -2402,7 +2469,7 @@ function App() {
                         />
                       </div>
                     )}
-                    
+
                     <div>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-400">Order size</span>
@@ -2426,18 +2493,34 @@ function App() {
                           </button>
                         </div>
                       </div>
+                      {/* Add the available balance display here */}
+                      <div className="mt-1 text-xs text-gray-400">
+                        Available {tradeType === 'buy' ? getCurrentPairTokens().quoteAsset : getCurrentPairTokens().baseAsset}:{' '}
+                        <span className="text-gray-200">
+                          {tradeType === 'buy' 
+                            ? balances.available[getCurrentPairTokens().quoteAsset as keyof typeof balances.available].toFixed(3)
+                            : balances.available[getCurrentPairTokens().baseAsset as keyof typeof balances.available].toFixed(3)
+                          }
+                        </span>
+                      </div>
                     </div>
 
                     <div className="mt-4">
                       <button
                         className={`w-full py-2.5 text-sm font-medium rounded transition-colors outline-none
                           ${
-                            (orderType === "market" ? Boolean(size) : Boolean(price && size))
+                            (
+                              orderType === "market"
+                                ? Boolean(size)
+                                : Boolean(price && size)
+                            )
                               ? "bg-fuel-green text-fuel-dark-900 hover:bg-opacity-90"
                               : "bg-fuel-green/50 text-fuel-dark-900 cursor-not-allowed"
                           }`}
                         onClick={handlePlaceOrder}
-                        disabled={orderType === "market" ? !size : !price || !size}
+                        disabled={
+                          orderType === "market" ? !size : !price || !size
+                        }
                       >
                         Place Order
                       </button>
@@ -2452,9 +2535,9 @@ function App() {
         ) : activeScreen === "p2p" ? (
           <P2PComponent />
         ) : (
-          <Portfolio 
-            trades={trades} 
-            userTrades={userTrades} 
+          <Portfolio
+            trades={trades}
+            userTrades={userTrades}
             activeOrders={activeOrders}
             orderHistory={orderHistory}
             onCancelOrder={handleCancelOrder}
