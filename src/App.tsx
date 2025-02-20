@@ -1251,7 +1251,7 @@ function App() {
                 alt="FUEL Logo"
                 className="w-5 h-5 sm:w-7 sm:h-7 mt-1.5"
               />
-              <span className="text-base sm:text-lg font-bold">O2.live</span>
+              <span className="text-base sm:text-lg font-bold">O2 DEX</span>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
               <button
