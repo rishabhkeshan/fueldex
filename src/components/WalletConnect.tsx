@@ -44,7 +44,7 @@ function WalletConnect({ variant = 'header', tradeType = 'buy', tokenSymbol = 'F
           className="flex items-center space-x-2 bg-fuel-green text-fuel-dark-900 px-4 py-1.5 rounded text-sm font-medium hover:bg-opacity-90 transition-colors"
         >
           <Wallet className="w-4 h-4" />
-          <span>{isConnecting ? "Connecting" : "Connect wallet"}</span>
+          <span>{isConnecting ? "Connecting" : "Connect"}</span>
         </button>
       ) : (
         <div className="flex items-center space-x-2 bg-fuel-dark-700 px-4 py-1.5 rounded">

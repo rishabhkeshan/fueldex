@@ -1239,6 +1239,21 @@ function App() {
   // Add this near your other state declarations
   const [orderBookTradesSlider, setOrderBookTradesSlider] = useState(activeView === 'orderbook' ? 0 : 50);
 
+  // Add this effect near other useEffect hooks to update the document title
+  useEffect(() => {
+    // Get the current price stats for selected pair
+    const currentStats = priceStats[selectedPair];
+    if (currentStats) {
+      // Format the price with 2 decimal places
+      const formattedPrice = currentStats.last.toFixed(2);
+      // Update document title with pair and price
+      document.title = `${formattedPrice} | ${selectedPair} | O2`;
+    } else {
+      // Fallback title if no price available
+      document.title = `O2`;
+    }
+  }, [priceStats, selectedPair]); // Dependencies: update when price stats or selected pair changes
+
   return (
     <div className="h-screen flex flex-col bg-fuel-dark-900 text-gray-100">
       {/* Header - Always visible */}
@@ -1251,7 +1266,7 @@ function App() {
                 alt="FUEL Logo"
                 className="w-5 h-5 sm:w-7 sm:h-7 mt-1.5"
               />
-              <span className="text-base sm:text-lg font-bold">O2 DEX</span>
+              <span className="text-base sm:text-lg font-bold">O2</span>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
               <button
@@ -1263,7 +1278,7 @@ function App() {
                   }`}
                 onClick={() => setActiveScreen("terminal")}
               >
-                Terminal
+                Trade
               </button>
               <button
                 className={`px-2 sm:px-3 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
@@ -1798,15 +1813,13 @@ function App() {
             </div>
 
             {/* Desktop View - Hide on mobile */}
-            <div className="hidden sm:flex flex-1 min-h-0">
+            <div className="hidden sm:flex flex-1 min-h-0 p-2 gap-2"> {/* Add padding and gap */}
               {/* Left section containing Chart, Orderbook/Trades, and Orders/History */}
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col gap-2"> {/* Add gap */}
                 {/* Top section with Chart and Orderbook/Trades */}
-                <div className="flex flex-1 overflow-hidden">
-                  {" "}
-                  {/* Add overflow-hidden */}
+                <div className="flex flex-1 overflow-hidden gap-2"> {/* Add gap */}
                   {/* Chart */}
-                  <div className="flex-1 bg-fuel-dark-800 border-r border-fuel-dark-600 flex flex-col overflow-hidden">
+                  <div className="flex-1 bg-fuel-dark-800 border-r border-fuel-dark-600 flex flex-col overflow-hidden rounded-lg">
                     {" "}
                     {/* Add flex flex-col overflow-hidden */}
                     {/* Add trading pair header */}
@@ -2017,7 +2030,7 @@ function App() {
                     </div>
                   </div>
                   {/* Order Book/Trades Column */}
-                  <div className="w-[250px] flex flex-col min-h-0 border-r border-fuel-dark-600 bg-fuel-dark-800">
+                  <div className="w-[250px] flex flex-col min-h-0 border-r border-fuel-dark-600 bg-fuel-dark-800 rounded-lg">
                     {/* Tabs for Orderbook/Trades */}
                     <div className="flex border-b border-fuel-dark-600 relative">
                       <button
@@ -2065,7 +2078,7 @@ function App() {
                           <div className="p-2 flex flex-col h-full">
                             {/* Header */}
                             <div
-                              className="text-[8px] sm:text-[10px] grid grid-cols-3 text-gray-400 mb-2 p-1.5"
+                              className="text-[8px] sm:text-[12px] grid grid-cols-3 text-gray-300 mb-2 p-1.5"
                               style={{ gridTemplateColumns: "30% 30% 40%" }}
                             >
                               <span>Price</span>
@@ -2081,7 +2094,7 @@ function App() {
                                   {orderBook.asks.map((order, i) => (
                                     <div
                                       key={i}
-                                      className="grid grid-cols-3 text-[8px] sm:text-[10px] relative overflow-hidden p-[2px]"
+                                      className="grid grid-cols-3 text-[8px] sm:text-[12px] relative overflow-hidden p-[2px]"
                                       style={{
                                         gridTemplateColumns: "30% 30% 40%",
                                       }}
@@ -2100,7 +2113,7 @@ function App() {
                                       <span className="relative z-10 text-right">
                                         {order.size.toFixed(3)}
                                       </span>
-                                      <span className="relative z-10 text-right text-gray-500">
+                                      <span className="relative z-10 text-right text-gray-300">
                                         {order.total.toFixed(3)}
                                       </span>
                                     </div>
@@ -2110,7 +2123,7 @@ function App() {
 
                               {/* Spread section - not scrollable */}
                               <div className="py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700 flex flex-col items-center justify-center">
-                                <div className="text-fuel-green text-[8px] sm:text-[10px] font-medium">
+                                <div className="text-fuel-green text-[8px] sm:text-[12px] font-medium">
                                   {calculateSpread(
                                     orderBook.asks,
                                     orderBook.bids
@@ -2137,7 +2150,7 @@ function App() {
                                   {orderBook.bids.map((order, i) => (
                                     <div
                                       key={i}
-                                      className="grid grid-cols-3 text-[8px] sm:text-[10px] relative overflow-hidden p-[2px]"
+                                      className="grid grid-cols-3 text-[8px] sm:text-[12px] relative overflow-hidden p-[2px]"
                                       style={{
                                         gridTemplateColumns: "30% 30% 40%",
                                       }}
@@ -2156,7 +2169,7 @@ function App() {
                                       <span className="relative z-10 text-right">
                                         {order.size.toFixed(3)}
                                       </span>
-                                      <span className="relative z-10 text-right text-gray-500">
+                                      <span className="relative z-10 text-right text-gray-300">
                                         {order.total.toFixed(3)}
                                       </span>
                                     </div>
@@ -2230,7 +2243,7 @@ function App() {
                 </div>
 
                 {/* Bottom section for Orders and History */}
-                <div className="h-[200px] bg-fuel-dark-800 border-t border-fuel-dark-600">
+                <div className="h-[200px] bg-fuel-dark-800 border-t border-fuel-dark-600 rounded-lg">
                   <div className="flex border-b border-fuel-dark-600">
                     <button
                       className={`flex-1 py-2 text-center text-sm font-medium transition-colors outline-none
@@ -2381,7 +2394,7 @@ function App() {
               </div>
 
               {/* Right section for Trading Interface */}
-              <div className="w-[260px] flex flex-col min-h-0 border-l border-fuel-dark-600 bg-fuel-dark-800">
+              <div className="w-[260px] flex flex-col min-h-0 border-l border-fuel-dark-600 bg-fuel-dark-800 rounded-lg">
                 <div className="p-3">
                   {/* Market/Limit Tabs with sliding indicator */}
                   <div className="mb-3">
@@ -2457,13 +2470,13 @@ function App() {
                     {/* Show price input only for limit orders */}
                     {orderType === "limit" && (
                       <div>
-                        <div className="flex justify-between text-sm mb-1">
+                        {/* <div className="flex justify-between text-sm mb-1">
                           <span className="text-gray-400">Price</span>
-                        </div>
+                        </div> */}
                         <input
                           type="number"
                           className="w-full bg-fuel-dark-700 rounded p-2 text-sm"
-                          placeholder="0.00"
+                          placeholder="Price"
                           value={price}
                           onChange={(e) => setPrice(e.target.value)}
                         />
@@ -2471,15 +2484,15 @@ function App() {
                     )}
 
                     <div>
-                      <div className="flex justify-between text-xs mb-1">
+                      {/* <div className="flex justify-between text-xs mb-1">
                         <span className="text-gray-400">Order size</span>
                         <span className="text-gray-400">MAX</span>
-                      </div>
+                      </div> */}
                       <div className="flex space-x-2">
                         <input
                           type="number"
                           className="flex-1 bg-fuel-dark-700 rounded p-2 text-sm hover:bg-fuel-dark-600 transition-colors"
-                          placeholder="0.00"
+                          placeholder="Size"
                           value={size}
                           onChange={(e) => setSize(e.target.value)}
                           step={0.001}
