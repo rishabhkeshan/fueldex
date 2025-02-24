@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronDown } from 'lucide-react';
 import USDTIcon from '../assets/usdt.svg';
 import USDCIcon from '../assets/usdc.svg';
 import ETHIcon from '../assets/eth.svg';
+import { MobileP2PLayout } from './MobileP2PLayout';
 
 interface Order {
   id: string;
@@ -189,6 +190,27 @@ const mockTrades: Trade[] = [
   { timestamp: '10:22', type: 'buy', pair: 'USDC/USDT', price: 1.0002, amount: 2000, total: 2000.40 }
 ];
 
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false); // Initialize as false to prevent hydration mismatch
+
+  useEffect(() => {
+    // Initial check
+    setIsMobile(window.innerWidth < 768);
+
+    // Add resize listener
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return isMobile;
+};
+
 function P2PComponent() {
   const [selectedPair, setSelectedPair] = useState<TradingPair>('ETH/USDC');
   const [isPairSelectOpen, setIsPairSelectOpen] = useState(false);
@@ -207,6 +229,9 @@ function P2PComponent() {
   const [simulationInterval, setSimulationInterval] = useState<NodeJS.Timeout | null>(null);
   const [pairStats, setPairStats] = useState<Record<TradingPair, PairStats>>(initialPairStats);
   const [activeTab, setActiveTab] = useState<'trades' | 'orders'>('trades');
+
+  const isMobile = useIsMobile();
+  const [showTradingView, setShowTradingView] = useState(false);
 
   const getTokens = (pair: string) => {
     const [baseToken, quoteToken] = pair.split('/');
@@ -522,6 +547,36 @@ function P2PComponent() {
       }
     };
   }, [simulationInterval]);
+
+  if (isMobile) {
+    return (
+      <MobileP2PLayout
+        selectedPair={selectedPair}
+        baseToken={baseToken}
+        quoteToken={quoteToken}
+        isPairSelectOpen={isPairSelectOpen}
+        setIsPairSelectOpen={setIsPairSelectOpen}
+        getTokenIcon={getTokenIcon}
+        TRADING_PAIRS={TRADING_PAIRS}
+        setSelectedPair={setSelectedPair}
+        orderBook={orderBook}
+        recentTrades={recentTrades}
+        userOrders={userOrders}
+        pairStats={pairStats}
+        isBuying={isBuying}
+        price={price}
+        amount={amount}
+        setPrice={setPrice}
+        setAmount={setAmount}
+        placeOrder={placeOrder}
+        showTradingView={showTradingView}
+        setShowTradingView={setShowTradingView}
+        setIsBuying={setIsBuying}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-fuel-dark-900">

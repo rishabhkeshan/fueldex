@@ -1254,6 +1254,12 @@ function App() {
     }
   }, [priceStats, selectedPair]); // Dependencies: update when price stats or selected pair changes
 
+  // Add new state for mobile trade form visibility
+  const [showMobileTradeForm, setShowMobileTradeForm] = useState(false);
+
+  // First, add a new state for the order type dropdown
+  const [isOrderTypeDropdownOpen, setIsOrderTypeDropdownOpen] = useState(false);
+
   return (
     <div className="h-screen flex flex-col bg-fuel-dark-900 text-gray-100">
       {/* Header - Always visible */}
@@ -1343,38 +1349,26 @@ function App() {
       </header>
 
       {/* Mobile Navigation Tabs */}
-      {activeScreen === "terminal" && (
+      {activeScreen === "terminal" && !showMobileTradeForm && (
         <div className="sm:hidden bg-fuel-dark-800 border-b border-fuel-dark-600">
           <div className="flex">
             <button
               className={`flex-1 py-3 text-center text-sm border-b-2 transition-colors outline-none
-                ${
-                  mobileView === "chart"
-                    ? "border-fuel-green text-fuel-green"
-                    : "border-transparent text-gray-400"
-                }`}
+                ${mobileView === "chart" ? "border-fuel-green text-fuel-green" : "border-transparent text-gray-400"}`}
               onClick={() => setMobileView("chart")}
             >
               Chart
             </button>
             <button
               className={`flex-1 py-3 text-center text-sm border-b-2 transition-colors outline-none
-                ${
-                  mobileView === "orderbook"
-                    ? "border-fuel-green text-fuel-green"
-                    : "border-transparent text-gray-400"
-                }`}
+                ${mobileView === "orderbook" ? "border-fuel-green text-fuel-green" : "border-transparent text-gray-400"}`}
               onClick={() => setMobileView("orderbook")}
             >
               Order Book
             </button>
             <button
               className={`flex-1 py-3 text-center text-sm border-b-2 transition-colors outline-none
-                ${
-                  mobileView === "trades"
-                    ? "border-fuel-green text-fuel-green"
-                    : "border-transparent text-gray-400"
-                }`}
+                ${mobileView === "trades" ? "border-fuel-green text-fuel-green" : "border-transparent text-gray-400"}`}
               onClick={() => setMobileView("trades")}
             >
               Trades
@@ -1389,176 +1383,414 @@ function App() {
           <>
             {/* Mobile View Content */}
             <div className="sm:hidden flex flex-col h-full">
-              {/* Main Content Area */}
-              <div className="flex-1 overflow-hidden">
-                {mobileView === "chart" && (
-                  <div className="h-[300px]">
-                    <TradingViewWidget
-                      trades={trades}
-                      userTrades={userTrades}
-                      selectedTimeframe={selectedTimeframe}
-                      onTimeframeChange={setSelectedTimeframe} // Add this prop
-                    />
-                  </div>
-                )}
-
-                {mobileView === "orderbook" && (
-                  <div className="h-[300px] overflow-auto">
-                    <div className="p-2">
-                      <div className="text-[10px] grid grid-cols-3 text-gray-400 mb-2">
-                        <span>Price</span>
-                        <span className="text-right">Amount</span>
-                        <span className="text-right">Total</span>
-                      </div>
-
-                      {/* Asks */}
-                      <div className="space-y-0.5 mb-2">
-                        {orderBook.asks.map((order, i) => (
-                          <div
-                            key={i}
-                            className="grid grid-cols-3 text-[10px] sm:text-xs relative overflow-hidden"
-                          >
-                            <div
-                              className="absolute inset-0 bg-red-500/10"
-                              style={{
-                                width: `${(order.total / 2016.4) * 100}%`,
-                              }}
-                            ></div>
-                            <span className="relative z-10 text-red-400">
-                              {order.price.toFixed(3)}
-                            </span>
-                            <span className="relative z-10 text-right">
-                              {order.size.toFixed(3)}
-                            </span>
-                            <span className="relative z-10 text-right text-gray-500">
-                              {order.total.toFixed(3)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Current Price */}
-                      <div className="sticky top-0 text-center py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700">
-                        <div className="text-fuel-green text-xs sm:text-sm font-medium">
-                          {calculateSpread(
-                            orderBook.asks,
-                            orderBook.bids
-                          ).avgPrice.toFixed(3)}
-                        </div>
-                        <div className="text-[10px] sm:text-xs text-gray-400">
-                          Spread:{" "}
-                          {calculateSpread(
-                            orderBook.asks,
-                            orderBook.bids
-                          ).spread.toFixed(3)}{" "}
-                          (
-                          {calculateSpread(
-                            orderBook.asks,
-                            orderBook.bids
-                          ).spreadPercentage.toFixed(2)}
-                          %)
-                        </div>
-                      </div>
-
-                      {/* Bids */}
-                      <div className="space-y-0.5 mt-2">
-                        {orderBook.bids.map((order, i) => (
-                          <div
-                            key={i}
-                            className="grid grid-cols-3 text-[10px] sm:text-xs relative overflow-hidden"
-                          >
-                            <div
-                              className="absolute inset-0 bg-green-900/20"
-                              style={{
-                                width: `${(order.total / 948.1) * 100}%`,
-                              }}
-                            ></div>
-                            <span className="relative z-10 text-green-400">
-                              {order.price.toFixed(3)}
-                            </span>
-                            <span className="relative z-10 text-right">
-                              {order.size.toFixed(3)}
-                            </span>
-                            <span className="relative z-10 text-right text-gray-500">
-                              {order.total.toFixed(3)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {mobileView === "trades" && (
-                  <div className="h-[300px] overflow-auto">
-                    <div className="p-2">
-                      <div className="text-[10px] sm:text-xs grid grid-cols-3 text-gray-400 mb-2">
-                        <span>Price</span>
-                        <span className="text-right">Size</span>
-                        <span className="text-right">Time</span>
-                      </div>
-                      <div className="space-y-0.5">
-                        {trades.map((trade, i) => (
-                          <div
-                            key={i}
-                            className="grid grid-cols-3 text-[10px] sm:text-xs"
-                          >
-                            <span
-                              className={`font-mono ${
-                                trade.price >=
-                                (trades[i + 1]?.price ?? trade.price)
-                                  ? "text-green-400"
-                                  : "text-red-400"
-                              }`}
+              {/* Main Content Area - Adjust height to leave space for orders/history */}
+              <div className="flex-1 min-h-0 flex flex-col">
+                {showMobileTradeForm ? (
+                  // Show trade form and orderbook when trade type is selected
+                  <div className="h-[calc(100vh-300px)]"> {/* Increased height by removing slider height */}
+                    <div className="flex h-full">
+                      {/* Trade Form - Increased width */}
+                      <div className="w-3/5 p-3 border-r border-fuel-dark-600">
+                        <button 
+                          onClick={() => setShowMobileTradeForm(false)}
+                          className="mb-3 text-xs text-gray-400 hover:text-gray-300"
+                        >
+                          ← Back
+                        </button>
+                        
+                        <div className="space-y-2">
+                          {/* Buy/Sell Tabs */}
+                          <div className="flex mb-2">
+                            <button
+                              className={`flex-1 py-1.5 text-xs font-medium rounded-l transition-colors outline-none
+                                ${tradeType === "buy" ? "bg-fuel-green text-fuel-dark-900" : "bg-fuel-dark-700 text-gray-400"}`}
+                              onClick={() => setTradeType("buy")}
                             >
-                              {(trade.price || trade.close || 0).toFixed(3)}
-                            </span>
-                            <span className="text-right font-mono">
-                              {trade.quantity.toFixed(3)}
-                            </span>
-                            <span className="text-right text-gray-500 font-mono">
-                              {trade.time}
-                            </span>
+                              BUY
+                            </button>
+                            <button
+                              className={`flex-1 py-1.5 text-xs font-medium rounded-r transition-colors outline-none
+                                ${tradeType === "sell" ? "bg-red-500 text-white" : "bg-fuel-dark-700 text-gray-400"}`}
+                              onClick={() => setTradeType("sell")}
+                            >
+                              SELL
+                            </button>
                           </div>
-                        ))}
+
+                          {/* Order Type Dropdown */}
+                          <div className="relative">
+                            <button
+                              className="w-full bg-fuel-dark-700 rounded p-1.5 text-xs flex items-center justify-between"
+                              onClick={() => setIsOrderTypeDropdownOpen(!isOrderTypeDropdownOpen)}
+                            >
+                              <span className="text-gray-200">{orderType.charAt(0).toUpperCase() + orderType.slice(1)}</span>
+                              <ChevronDown
+                                className={`h-3 w-3 text-gray-400 transition-transform ${
+                                  isOrderTypeDropdownOpen ? "rotate-180" : ""
+                                }`}
+                              />
+                            </button>
+                            {isOrderTypeDropdownOpen && (
+                              <div className="absolute top-full left-0 w-full mt-1 bg-fuel-dark-700 rounded shadow-lg border border-fuel-dark-600 z-10">
+                                <button
+                                  className="w-full p-1.5 text-xs text-left hover:bg-fuel-dark-600 transition-colors outline-none"
+                                  onClick={() => {
+                                    setOrderType("market");
+                                    setIsOrderTypeDropdownOpen(false);
+                                    setPrice(""); // Clear price when switching to market
+                                  }}
+                                >
+                                  Market
+                                </button>
+                                <button
+                                  className="w-full p-1.5 text-xs text-left hover:bg-fuel-dark-600 transition-colors outline-none"
+                                  onClick={() => {
+                                    setOrderType("limit");
+                                    setIsOrderTypeDropdownOpen(false);
+                                  }}
+                                >
+                                  Limit
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {orderType === "limit" && (
+                            <div>
+                              <input
+                                type="number"
+                                className="w-full bg-fuel-dark-700 rounded p-1.5 text-xs"
+                                placeholder="Price"
+                                value={price}
+                                onChange={(e) => setPrice(e.target.value)}
+                              />
+                            </div>
+                          )}
+
+                          <div>
+                            <div className="flex space-x-2">
+                              <input
+                                type="number"
+                                className="w-[70%] bg-fuel-dark-700 rounded p-1.5 text-xs"
+                                placeholder="Size"
+                                value={size}
+                                onChange={(e) => setSize(e.target.value)}
+                                step={0.001}
+                              />
+                              <button
+                                className="w-[30%] bg-fuel-dark-700 rounded p-1.5 text-xs"
+                              >
+                                {getCurrentPairTokens().baseAsset}
+                              </button>
+                            </div>
+                            <div className="mt-1 text-[10px] text-gray-400">
+                              Available {tradeType === 'buy' ? getCurrentPairTokens().quoteAsset : getCurrentPairTokens().baseAsset}:{' '}
+                              <span className="text-gray-200">
+                                {tradeType === 'buy' 
+                                  ? balances.available[getCurrentPairTokens().quoteAsset as keyof typeof balances.available].toFixed(3)
+                                  : balances.available[getCurrentPairTokens().baseAsset as keyof typeof balances.available].toFixed(3)
+                                }
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            className={`w-full py-2 text-xs font-medium rounded transition-colors outline-none
+                              ${(orderType === "market" ? Boolean(size) : Boolean(price && size))
+                                ? `${tradeType === 'buy' ? 'bg-fuel-green' : 'bg-red-500'} text-white hover:bg-opacity-90`
+                                : `${tradeType === 'buy' ? 'bg-fuel-green/50' : 'bg-red-500/50'} text-white cursor-not-allowed`
+                              }`}
+                            onClick={handlePlaceOrder}
+                            disabled={orderType === "market" ? !size : !price || !size}
+                          >
+                            {tradeType.toUpperCase()}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Orderbook - Decreased width and removed total column */}
+                      <div className="w-2/5 flex flex-col h-full">
+                        <div className="p-2 flex flex-col h-full">
+                          {/* Header - Updated grid */}
+                          <div className="text-[10px] grid grid-cols-2 text-gray-400 mb-2">
+                            <span>Price</span>
+                            <span className="text-right">Amount</span>
+                          </div>
+
+                          {/* Asks - Updated grid */}
+                          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
+                            <div className="space-y-0.5">
+                              {orderBook.asks.map((order, i) => (
+                                <div
+                                  key={i}
+                                  className="grid grid-cols-2 text-[10px] sm:text-xs relative overflow-hidden"
+                                >
+                                  <div
+                                    className="absolute inset-0 bg-red-500/10"
+                                    style={{
+                                      width: `${(order.total / 2016.4) * 100}%`,
+                                    }}
+                                  ></div>
+                                  <span className="relative z-10 text-red-400">
+                                    {order.price.toFixed(3)}
+                                  </span>
+                                  <span className="relative z-10 text-right">
+                                    {order.size.toFixed(3)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Spread - No changes needed to layout */}
+                          <div className="py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700">
+                            <div className="text-fuel-green text-xs sm:text-sm font-medium text-center">
+                              {calculateSpread(orderBook.asks, orderBook.bids).avgPrice.toFixed(3)}
+                            </div>
+                            <div className="text-[10px] sm:text-xs text-gray-400 text-center">
+                              Spread: {calculateSpread(orderBook.asks, orderBook.bids).spread.toFixed(3)}{" "}
+                              ({calculateSpread(orderBook.asks, orderBook.bids).spreadPercentage.toFixed(2)}%)
+                            </div>
+                          </div>
+
+                          {/* Bids - Updated grid */}
+                          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
+                            <div className="space-y-0.5">
+                              {orderBook.bids.map((order, i) => (
+                                <div
+                                  key={i}
+                                  className="grid grid-cols-2 text-[10px] sm:text-xs relative overflow-hidden"
+                                >
+                                  <div
+                                    className="absolute inset-0 bg-green-900/20"
+                                    style={{
+                                      width: `${(order.total / 948.1) * 100}%`,
+                                    }}
+                                  ></div>
+                                  <span className="relative z-10 text-green-400">
+                                    {order.price.toFixed(3)}
+                                  </span>
+                                  <span className="relative z-10 text-right">
+                                    {order.size.toFixed(3)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
+                ) : (
+                  // Show different views based on mobileView state
+                  <div className="h-[calc(100vh-350px)]"> {/* Changed from 450px to 350px */}
+                    {mobileView === "chart" && (
+                      <TradingViewWidget
+                        trades={trades}
+                        userTrades={userTrades}
+                        selectedTimeframe={selectedTimeframe}
+                        onTimeframeChange={setSelectedTimeframe}
+                      />
+                    )}
+
+                    {mobileView === "orderbook" && (
+                      <div className="h-full flex flex-col">
+                        <div className="p-2 flex flex-col h-full">
+                          {/* Header */}
+                          <div className="text-[10px] grid grid-cols-3 text-gray-400 mb-2">
+                            <span>Price</span>
+                            <span className="text-right">Amount</span>
+                            <span className="text-right">Total</span>
+                          </div>
+
+                          {/* Asks - Separate scrollable section */}
+                          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
+                            <div className="space-y-0.5">
+                              {orderBook.asks.map((order, i) => (
+                                <div
+                                  key={i}
+                                  className="grid grid-cols-3 text-[10px] sm:text-xs relative overflow-hidden"
+                                >
+                                  <div
+                                    className="absolute inset-0 bg-red-500/10"
+                                    style={{
+                                      width: `${(order.total / 2016.4) * 100}%`,
+                                    }}
+                                  ></div>
+                                  <span className="relative z-10 text-red-400">
+                                    {order.price.toFixed(3)}
+                                  </span>
+                                  <span className="relative z-10 text-right">
+                                    {order.size.toFixed(3)}
+                                  </span>
+                                  <span className="relative z-10 text-right text-gray-500">
+                                    {order.total.toFixed(3)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Spread - Fixed position */}
+                          <div className="py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700">
+                            <div className="text-fuel-green text-xs sm:text-sm font-medium text-center">
+                              {calculateSpread(orderBook.asks, orderBook.bids).avgPrice.toFixed(3)}
+                            </div>
+                            <div className="text-[10px] sm:text-xs text-gray-400 text-center">
+                              Spread: {calculateSpread(orderBook.asks, orderBook.bids).spread.toFixed(3)}{" "}
+                              ({calculateSpread(orderBook.asks, orderBook.bids).spreadPercentage.toFixed(2)}%)
+                            </div>
+                          </div>
+
+                          {/* Bids - Separate scrollable section */}
+                          <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
+                            <div className="space-y-0.5">
+                              {orderBook.bids.map((order, i) => (
+                                <div
+                                  key={i}
+                                  className="grid grid-cols-3 text-[10px] sm:text-xs relative overflow-hidden"
+                                >
+                                  <div
+                                    className="absolute inset-0 bg-green-900/20"
+                                    style={{
+                                      width: `${(order.total / 948.1) * 100}%`,
+                                    }}
+                                  ></div>
+                                  <span className="relative z-10 text-green-400">
+                                    {order.price.toFixed(3)}
+                                  </span>
+                                  <span className="relative z-10 text-right">
+                                    {order.size.toFixed(3)}
+                                  </span>
+                                  <span className="relative z-10 text-right text-gray-500">
+                                    {order.total.toFixed(3)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {mobileView === "trades" && (
+                      <div className="h-full overflow-auto">
+                        <div className="p-2">
+                          <div className="text-[10px] grid grid-cols-3 text-gray-400 mb-2">
+                            <span>Price</span>
+                            <span className="text-right">Size</span>
+                            <span className="text-right">Time</span>
+                          </div>
+                          <div className="space-y-0.5">
+                            {trades.map((trade, i) => (
+                              <div
+                                key={i}
+                                className="grid grid-cols-3 text-[10px] sm:text-xs"
+                              >
+                                <span
+                                  className={`font-mono ${
+                                    trade.price >= (trades[i + 1]?.price ?? trade.price)
+                                      ? "text-green-400"
+                                      : "text-red-400"
+                                  }`}
+                                >
+                                  {(trade.price || trade.close || 0).toFixed(3)}
+                                </span>
+                                <span className="text-right font-mono">
+                                  {trade.quantity.toFixed(3)}
+                                </span>
+                                <span className="text-right text-gray-500 font-mono">
+                                  {trade.time}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
-              </div>
 
-              {/* Orders/History Section */}
-              <div className="h-[200px] bg-fuel-dark-800 border-t border-fuel-dark-600">
-                <div className="flex border-b border-fuel-dark-600">
-                  <button
-                    className={`flex-1 py-2 text-center text-sm font-medium transition-colors outline-none
-                      ${
-                        mobileBottomView === "orders"
-                          ? "text-fuel-green"
-                          : "text-gray-400"
-                      }`}
-                    onClick={() => setMobileBottomView("orders")}
-                  >
-                    Orders
-                    {activeOrders.length > 0 ? ` (${activeOrders.length})` : ""}
-                  </button>
-                  <button
-                    className={`flex-1 py-2 text-center text-sm font-medium transition-colors outline-none
-                      ${
-                        mobileBottomView === "history"
-                          ? "text-fuel-green"
-                          : "text-gray-400"
-                      }`}
-                    onClick={() => setMobileBottomView("history")}
-                  >
-                    History
-                    {orderHistory.length > 0 ? ` (${orderHistory.length})` : ""}
-                  </button>
-                </div>
+                {/* Orders/History Section - Reduced height */}
+                <div className="h-[200px] bg-fuel-dark-800 border-t border-fuel-dark-600"> {/* Changed from 300px to 200px */}
+                  <div className="flex border-b border-fuel-dark-600">
+                    <button
+                      className={`flex-1 py-2 text-center text-sm font-medium transition-colors outline-none
+                        ${mobileBottomView === "orders" ? "text-fuel-green" : "text-gray-400"}`}
+                      onClick={() => setMobileBottomView("orders")}
+                    >
+                      Orders {activeOrders.length > 0 ? ` (${activeOrders.length})` : ""}
+                    </button>
+                    <button
+                      className={`flex-1 py-2 text-center text-sm font-medium transition-colors outline-none
+                        ${mobileBottomView === "history" ? "text-fuel-green" : "text-gray-400"}`}
+                      onClick={() => setMobileBottomView("history")}
+                    >
+                      History {orderHistory.length > 0 ? ` (${orderHistory.length})` : ""}
+                    </button>
+                  </div>
 
-                <div className="overflow-auto h-[calc(200px-40px)]">
-                  {mobileBottomView === "orders" ? (
-                    activeOrders.length > 0 ? (
+                  <div className="overflow-auto h-[calc(200px-40px)]"> {/* Changed from 300px to 200px */}
+                    {mobileBottomView === "orders" ? (
+                      activeOrders.length > 0 ? (
+                        <div>
+                          {/* Table Headers */}
+                          <div className="grid grid-cols-5 text-[10px] text-gray-400 p-2 border-b border-fuel-dark-600">
+                            <div>Date</div>
+                            <div>Pair</div>
+                            <div>Type</div>
+                            <div>Amount</div>
+                            <div>Price</div>
+                          </div>
+                          {/* Table Content */}
+                          <div className="divide-y divide-fuel-dark-600">
+                            {activeOrders.map((order) => (
+                              <div
+                                key={order.id}
+                                className="grid grid-cols-5 p-2 text-xs hover:bg-fuel-dark-700 group"
+                              >
+                                <div className="text-gray-400">
+                                  {new Date(order.timestamp).toLocaleTimeString()}
+                                </div>
+                                <div>{order.pair}</div>
+                                <div
+                                  className={
+                                    order.type === "buy"
+                                      ? "text-green-400"
+                                      : "text-red-400"
+                                  }
+                                >
+                                  {order.type.toUpperCase()}
+                                  {order.status === "partial" && " (PARTIAL)"}
+                                </div>
+                                <div>
+                                  {order.size.toFixed(3)}
+                                  {order.status === "partial" && (
+                                    <span className="text-gray-400">
+                                      {" "}
+                                      ({order.filled!.toFixed(3)} filled)
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span>{order.price.toFixed(3)}</span>
+                                  <button
+                                    className="px-2 py-0.5 text-[10px] text-gray-400 hover:text-gray-300 hover:bg-fuel-dark-600 rounded opacity-0 group-hover:opacity-100 transition-opacity outline-none"
+                                    onClick={() => handleCancelOrder(order.id)}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                          <p className="text-sm">No active orders</p>
+                        </div>
+                      )
+                    ) : orderHistory.length > 0 ? (
                       <div>
                         {/* Table Headers */}
                         <div className="grid grid-cols-5 text-[10px] text-gray-400 p-2 border-b border-fuel-dark-600">
@@ -1570,246 +1802,71 @@ function App() {
                         </div>
                         {/* Table Content */}
                         <div className="divide-y divide-fuel-dark-600">
-                          {activeOrders.map((order) => (
+                          {orderHistory.map((order) => (
                             <div
                               key={order.id}
-                              className="grid grid-cols-5 p-2 text-xs hover:bg-fuel-dark-700 group"
+                              className="grid grid-cols-5 p-2 text-xs hover:bg-fuel-dark-700"
                             >
                               <div className="text-gray-400">
-                                {new Date(order.timestamp).toLocaleTimeString()}
+                                {new Date(order.completedAt).toLocaleTimeString()}
                               </div>
                               <div>{order.pair}</div>
                               <div
-                                className={`${
+                                className={`flex items-center space-x-2 ${
                                   order.type === "buy"
                                     ? "text-green-400"
                                     : "text-red-400"
                                 }`}
                               >
-                                {order.type.toUpperCase()}
-                                {order.status === "partial" && " (PARTIAL)"}
-                              </div>
-                              <div>
-                                {order.size.toFixed(3)}
-                                {order.status === "partial" && (
-                                  <span className="text-gray-400">
-                                    {" "}
-                                    ({order.filled!.toFixed(3)} filled)
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span>{order.price.toFixed(3)}</span>
-                                <button
-                                  className="px-2 py-0.5 text-[10px] text-gray-400 hover:text-gray-300 hover:bg-fuel-dark-600 rounded opacity-0 group-hover:opacity-100 transition-opacity outline-none"
-                                  onClick={() => handleCancelOrder(order.id)}
+                                <span>{order.type.toUpperCase()}</span>
+                                <span
+                                  className={`text-[6px] md:text-[10px] px-1 md:px-1.5 rounded ${
+                                    order.status === "filled"
+                                      ? "bg-green-400/10 text-green-400"
+                                      : "bg-gray-400/10 text-gray-400"
+                                  }`}
                                 >
-                                  Cancel
-                                </button>
+                                  {order.status.toUpperCase()}
+                                </span>
                               </div>
+                              <div>{order.filled.toFixed(3)}</div>
+                              <div>{order.price.toFixed(3)}</div>
                             </div>
                           ))}
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                        <p className="text-sm">No active orders</p>
+                        <p className="text-sm">No order history</p>
                       </div>
-                    )
-                  ) : orderHistory.length > 0 ? (
-                    <div>
-                      {/* Table Headers */}
-                      <div className="grid grid-cols-5 text-[10px] text-gray-400 p-2 border-b border-fuel-dark-600">
-                        <div>Date</div>
-                        <div>Pair</div>
-                        <div>Type</div>
-                        <div>Amount</div>
-                        <div>Price</div>
-                      </div>
-                      {/* Table Content */}
-                      <div className="divide-y divide-fuel-dark-600">
-                        {orderHistory.map((order) => (
-                          <div
-                            key={order.id}
-                            className="grid grid-cols-5 p-2 text-xs hover:bg-fuel-dark-700"
-                          >
-                            <div className="text-gray-400">
-                              {new Date(order.completedAt).toLocaleTimeString()}
-                            </div>
-                            <div>{order.pair}</div>
-                            <div
-                              className={`flex items-center space-x-2 ${
-                                order.type === "buy"
-                                  ? "text-green-400"
-                                  : "text-red-400"
-                              }`}
-                            >
-                              <span>{order.type.toUpperCase()}</span>
-                              <span
-                                className={`text-[6px] md:text-[10px] px-1 md:px-1.5 rounded ${
-                                  order.status === "filled"
-                                    ? "bg-green-400/10 text-green-400"
-                                    : "bg-gray-400/10 text-gray-400"
-                                }`}
-                              >
-                                {order.status.toUpperCase()}
-                              </span>
-                            </div>
-                            <div>{order.filled.toFixed(3)}</div>
-                            <div>{order.price.toFixed(3)}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                      <p className="text-sm">No order history</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Trading Interface - Mobile */}
-              <div className="border-t border-fuel-dark-600">
-                <div className="p-2">
-                  {/* Buy/Sell Buttons - More compact */}
-                  <div className="flex mb-2">
-                    <button
-                      className={`flex-1 py-1.5 text-xs font-medium rounded-l transition-colors outline-none
-                        ${
-                          tradeType === "buy"
-                            ? "bg-fuel-green text-fuel-dark-900"
-                            : "bg-fuel-dark-700 text-gray-400"
-                        }`}
-                      onClick={() => setTradeType("buy")}
-                    >
-                      BUY
-                    </button>
-                    <button
-                      className={`flex-1 py-1.5 text-xs font-medium rounded-r transition-colors outline-none
-                        ${
-                          tradeType === "sell"
-                            ? "bg-red-500 text-white"
-                            : "bg-fuel-dark-700 text-gray-400"
-                        }`}
-                      onClick={() => setTradeType("sell")}
-                    >
-                      SELL
-                    </button>
-                  </div>
-
-                  {/* Order Form - More compact */}
-                  <div className="space-y-3">
-                    <div>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-gray-400">Order type</span>
-                        {orderType === "limit" && (
-                          <span className="text-gray-400">Price</span>
-                        )}
-                      </div>
-                      <div className="flex space-x-2">
-                        <div className="flex-1 relative">
-                          <button
-                            className="w-full bg-fuel-dark-700 rounded p-2 text-sm text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors outline-none"
-                            onClick={() => setIsOrderTypeOpen(!isOrderTypeOpen)}
-                          >
-                            <span>{orderType.toUpperCase()}</span>
-                            <ChevronDown
-                              className={`h-4 w-4 text-gray-400 transition-transform ${
-                                isOrderTypeOpen ? "rotate-180" : ""
-                              }`}
-                            />
-                          </button>
-                          {isOrderTypeOpen && (
-                            <div className="absolute top-full left-0 w-full mt-1 bg-fuel-dark-700 rounded shadow-lg border border-fuel-dark-600 z-10">
-                              <button
-                                className="w-full p-2 text-sm text-left hover:bg-fuel-dark-600 transition-colors outline-none"
-                                onClick={() => {
-                                  setOrderType("limit");
-                                  setIsOrderTypeOpen(false);
-                                }}
-                              >
-                                LIMIT
-                              </button>
-                              <button
-                                className="w-full p-2 text-sm text-left hover:bg-fuel-dark-600 transition-colors outline-none"
-                                onClick={() => {
-                                  setOrderType("market");
-                                  setIsOrderTypeOpen(false);
-                                  setPrice(""); // Clear price when switching to market
-                                }}
-                              >
-                                MARKET
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        {orderType === "limit" && (
-                          <input
-                            type="number"
-                            className="flex-1 bg-fuel-dark-700 rounded p-2 text-sm"
-                            placeholder="0.00"
-                            value={price}
-                            onChange={(e) => setPrice(e.target.value)}
-                          />
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-gray-400">Order size</span>
-                        <span className="text-gray-400">MAX</span>
-                      </div>
-                      <div className="flex space-x-2">
-                        <input
-                          type="number"
-                          className="flex-1 bg-fuel-dark-700 rounded p-1.5 text-xs hover:bg-fuel-dark-600 transition-colors"
-                          placeholder="0.00"
-                          value={size}
-                          onChange={(e) => setSize(e.target.value)}
-                          step={0.001}
-                        />
-                        <div className="relative">
-                          <button
-                            className="w-24 bg-fuel-dark-700 rounded p-2 text-sm text-left flex items-center justify-between hover:bg-fuel-dark-600 transition-colors outline-none"
-                            onClick={() =>
-                              setIsTokenSelectOpen(!isTokenSelectOpen)
-                            }
-                          >
-                            <span>{getCurrentPairTokens().baseAsset}</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Connect Wallet Button - More compact */}
-                    {/* <div className="mt-2">
-                      <WalletConnect variant="trade" tradeType={tradeType} />
-                    </div> */}
-                    <div className="mt-4">
-                      <button
-                        className={`w-full py-2 text-sm font-medium rounded transition-colors outline-none
-                          ${
-                            (
-                              orderType === "market"
-                                ? Boolean(size)
-                                : Boolean(price && size)
-                            )
-                              ? "bg-fuel-green text-fuel-dark-900 hover:bg-opacity-90"
-                              : "bg-fuel-green/50 text-fuel-dark-900 cursor-not-allowed"
-                          }`}
-                        onClick={handlePlaceOrder}
-                        disabled={
-                          orderType === "market" ? !size : !price || !size
-                        }
-                      >
-                        Place Order
-                      </button>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
+
+              {/* Buy/Sell Buttons - Only show when trade form is not visible */}
+              {!showMobileTradeForm && (
+                <div className="border-t border-fuel-dark-600 p-2 grid grid-cols-2 gap-2">
+                  <button
+                    className="py-3 text-sm font-medium rounded bg-fuel-green text-fuel-dark-900 hover:bg-opacity-90"
+                    onClick={() => {
+                      setTradeType('buy');
+                      setShowMobileTradeForm(true);
+                    }}
+                  >
+                    BUY
+                  </button>
+                  <button
+                    className="py-3 text-sm font-medium rounded bg-red-500 text-white hover:bg-opacity-90"
+                    onClick={() => {
+                      setTradeType('sell');
+                      setShowMobileTradeForm(true);
+                    }}
+                  >
+                    SELL
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Desktop View - Hide on mobile */}
