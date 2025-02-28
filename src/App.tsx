@@ -438,6 +438,21 @@ interface AssetBalances {
   };
 }
 
+// Add this function near your other utility functions
+const calculateOrderBookPressure = (orderBook: OrderBook) => {
+  const totalBuyVolume = orderBook.bids.reduce((sum, bid) => sum + bid.size, 0);
+  const totalSellVolume = orderBook.asks.reduce((sum, ask) => sum + ask.size, 0);
+  const totalVolume = totalBuyVolume + totalSellVolume;
+  
+  const buyPercentage = (totalBuyVolume / totalVolume) * 100;
+  const sellPercentage = (totalSellVolume / totalVolume) * 100;
+  
+  return {
+    buyPercentage: Math.round(buyPercentage),
+    sellPercentage: Math.round(sellPercentage)
+  };
+};
+
 function App() {
   const [orderType, setOrderType] = useState<'limit' | 'market'>('limit');
   const [size, setSize] = useState<string>('');
@@ -2728,6 +2743,60 @@ function App() {
                         </div>
                       </div>
                     )}
+                    <div className="mt-2 border-t border-fuel-dark-600 p-2 rounded-md">
+                      <div className="flex h-8 w-full bg-inherit rounded-md">
+                        <div
+                          className="h-full flex items-center justify-start px-2 relative"
+                          style={{
+                            width: `${
+                              calculateOrderBookPressure(orderBook)
+                                .buyPercentage
+                            }%`,
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-green-900/20 rounded-l-md" />
+                          <div className="flex items-center space-x-2 z-10">
+                            <div className="flex items-center gap-1.5">
+                              <span className="bg-green-400 px-1.5 py-0.5 rounded text-[10px] font-semibold text-fuel-dark-900">
+                                B
+                              </span>
+                              <span className="text-green-400 text-xs font-medium">
+                                {
+                                  calculateOrderBookPressure(orderBook)
+                                    .buyPercentage
+                                }
+                                %
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div
+                          className="h-full flex items-center justify-end px-2 relative"
+                          style={{
+                            width: `${
+                              calculateOrderBookPressure(orderBook)
+                                .sellPercentage
+                            }%`,
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-red-500/10 rounded-r-md" />
+                          <div className="flex items-center space-x-2 z-10">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-red-500 text-xs font-medium">
+                                {
+                                  calculateOrderBookPressure(orderBook)
+                                    .sellPercentage
+                                }
+                                %
+                              </span>
+                              <span className="bg-red-500 px-1.5 py-0.5 rounded text-[10px] font-semibold text-fuel-dark-900">
+                                S
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 {/* Bottom section for Orders and History */}
@@ -3083,17 +3152,42 @@ function App() {
       <div className="fixed bottom-0 left-0 right-0 h-6 bg-fuel-dark-800 border-t border-fuel-dark-600 px-4 flex items-center justify-between text-xs">
         <div className="flex items-center space-x-2">
           <div className="flex items-center space-x-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-fuel-green' : 'bg-red-500'}`} />
+            <div
+              className={`w-1.5 h-1.5 rounded-full ${
+                isOnline ? "bg-fuel-green" : "bg-red-500"
+              }`}
+            />
             <span className="text-gray-400">
-              {isOnline ? 'Online' : 'Offline'}
+              {isOnline ? "Online" : "Offline"}
             </span>
           </div>
         </div>
         <div className="flex items-center space-x-4 text-gray-400">
-          <a target="_blank" rel="noopener noreferrer" href="https://docs.fuel.network" className="hover:text-gray-300">Docs</a>
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href="https://docs.fuel.network"
+            className="hover:text-gray-300"
+          >
+            Docs
+          </a>
           {/* <a target="_blank" rel="noopener noreferrer" href="https://docs.fuel.trade" className="hover:text-gray-300">Support</a> */}
-          <a target="_blank" rel="noopener noreferrer" href="https://docs.fuel.network" className="hover:text-gray-300">Terms</a>
-          <a target="_blank" rel="noopener noreferrer" href="https://docs.fuel.network" className="hover:text-gray-300">Privacy Policy</a>
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href="https://docs.fuel.network"
+            className="hover:text-gray-300"
+          >
+            Terms
+          </a>
+          <a
+            target="_blank"
+            rel="noopener noreferrer"
+            href="https://docs.fuel.network"
+            className="hover:text-gray-300"
+          >
+            Privacy Policy
+          </a>
         </div>
       </div>
     </div>
