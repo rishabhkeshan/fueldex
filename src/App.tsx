@@ -2309,11 +2309,15 @@ function App() {
                     <div className="flex-1 overflow-hidden">
                       {" "}
                       {/* Add wrapper div with flex-1 and overflow-hidden */}
-                      <TradingViewWidget
+                      {/* <TradingViewWidget
                         trades={trades}
                         userTrades={userTrades}
                         selectedTimeframe={selectedTimeframe}
                         onTimeframeChange={setSelectedTimeframe}
+                      /> */}
+                      <TradingViewAdvancedWidget 
+                        trades={trades} 
+                        selectedPair={selectedPair}
                       />
                     </div>
                   </div>
@@ -2390,7 +2394,9 @@ function App() {
                             <circle cx="8" cy="13" r="1.5" />
                           </svg>
                         </button>
-                        <div className="absolute right-0 top-full mt-1 bg-fuel-dark-700 rounded shadow-lg border border-fuel-dark-600 hidden group-hover:block z-50">
+                        <div className="absolute right-0 top-full mt-1 bg-fuel-dark-700 rounded shadow-lg border border-fuel-dark-600 hidden group-hover:block z-50 min-w-[50px]">
+                          {/* Add padding to create a hover area between button and menu */}
+                          <div className="absolute -top-2 left-0 right-0 h-2" />
                           <button
                             className={`w-full px-4 py-2 text-left text-xs hover:bg-fuel-dark-600 transition-colors outline-none ${
                               orderBookLayout === "tabs"
@@ -2399,7 +2405,7 @@ function App() {
                             }`}
                             onClick={() => setOrderBookLayout("tabs")}
                           >
-                            Tabs View
+                            Tabs
                           </button>
                           <button
                             className={`w-full px-4 py-2 text-left text-xs hover:bg-fuel-dark-600 transition-colors outline-none ${
@@ -2409,7 +2415,7 @@ function App() {
                             }`}
                             onClick={() => setOrderBookLayout("sideBySide")}
                           >
-                            Side by Side
+                            Large
                           </button>
                         </div>
                       </div>
