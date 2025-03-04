@@ -1314,6 +1314,18 @@ function App() {
     };
   }, []);
 
+  // Add a new state to control chart visibility
+  const [showChart, setShowChart] = useState(false);
+
+  // Add useEffect to delay chart loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowChart(true);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <div className="h-screen flex flex-col bg-fuel-dark-900 text-gray-100">
       {/* Header - Always visible */}
@@ -1772,12 +1784,18 @@ function App() {
                     {" "}
                     {/* Changed from 450px to 350px */}
                     {mobileView === "chart" && (
-                      <TradingViewWidget
-                        trades={trades}
-                        userTrades={userTrades}
-                        selectedTimeframe={selectedTimeframe}
-                        onTimeframeChange={setSelectedTimeframe}
-                      />
+                      <>
+                        {!showChart ? (
+                          <div className="w-full h-full flex items-center justify-center bg-[#111111] text-gray-400">
+                            Loading chart...
+                          </div>
+                        ) : (
+                          <TradingViewAdvancedWidget
+                            trades={trades}
+                            selectedPair={selectedPair}
+                          />
+                        )}
+                      </>
                     )}
                     {mobileView === "orderbook" && (
                       <div className="h-full flex flex-col">
@@ -2315,10 +2333,18 @@ function App() {
                         selectedTimeframe={selectedTimeframe}
                         onTimeframeChange={setSelectedTimeframe}
                       /> */}
-                      <TradingViewAdvancedWidget 
-                        trades={trades} 
-                        selectedPair={selectedPair}
-                      />
+                      <>
+                        {!showChart ? (
+                          <div className="w-full h-full flex items-center justify-center bg-[#111111] text-gray-400">
+                            Loading chart...
+                          </div>
+                        ) : (
+                          <TradingViewAdvancedWidget
+                            trades={trades}
+                            selectedPair={selectedPair}
+                          />
+                        )}
+                      </>
                     </div>
                   </div>
                   {/* Order Book/Trades Column */}
