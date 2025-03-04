@@ -16,7 +16,6 @@ import {
 import DepositModal from './DepositModal';
 import WithdrawModal from './WithdrawModal';
 
-// Register ChartJS components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -131,8 +130,8 @@ const Portfolio: React.FC<PortfolioProps> = ({
   const [activeTab, setActiveTab] = useState<'balances' | 'orders' | 'history'>('balances');
   const [prices, setPrices] = useState<{[key: string]: number}>({
     ETH: 0,
-    USDT: 1, // USDT is pegged to USD
-    USDC: 1  // USDC is pegged to USD
+    USDT: 1,
+    USDC: 1 
   });
   const [totalEquity, setTotalEquity] = useState<number>(0);
   const [chartType, setChartType] = useState<'pnl' | 'account'>('pnl');
@@ -140,7 +139,6 @@ const Portfolio: React.FC<PortfolioProps> = ({
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
 
-  // Fetch prices from CoinGecko API
   useEffect(() => {
     const fetchPrices = async () => {
       try {
@@ -165,7 +163,6 @@ const Portfolio: React.FC<PortfolioProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Calculate total equity whenever prices or balances change
   useEffect(() => {
     const calculateTotalEquity = () => {
       const total = Object.entries(balances.total).reduce((sum, [asset, amount]) => {
@@ -178,13 +175,11 @@ const Portfolio: React.FC<PortfolioProps> = ({
     calculateTotalEquity();
   }, [prices, balances]);
 
-  // Track equity history whenever totalEquity changes
   useEffect(() => {
-    if (totalEquity <= 0) return; // Don't track zero or negative equity
+    if (totalEquity <= 0) return;
 
     setEquityHistory(prev => {
       const now = Date.now();
-      // Remove entries within the last second to prevent duplicates
       const filtered = prev.filter(point => 
         now - point.timestamp > 1000
       );
@@ -196,7 +191,6 @@ const Portfolio: React.FC<PortfolioProps> = ({
     });
   }, [totalEquity]);
 
-  // Calculate 14-day volume
   const calculateVolume = () => {
     const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
     const recentOrders = orderHistory.filter(order => 
@@ -220,7 +214,6 @@ const Portfolio: React.FC<PortfolioProps> = ({
     const positions: { [key: string]: { quantity: number; totalCost: number } } = {};
     let totalPnL = 0;
 
-    // Process trades in chronological order
     const sortedTrades = [...userTrades].sort((a, b) => 
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
@@ -238,7 +231,6 @@ const Portfolio: React.FC<PortfolioProps> = ({
         positions[asset].quantity += trade.quantity;
         positions[asset].totalCost += cost;
       } else {
-        // Sell - Calculate PnL only for the sold portion
         const avgCost = positions[asset].quantity > 0 
           ? positions[asset].totalCost / positions[asset].quantity 
           : 0;
@@ -246,15 +238,12 @@ const Portfolio: React.FC<PortfolioProps> = ({
         const saleValue = trade.quantity * trade.price;
         const costBasis = trade.quantity * avgCost;
         
-        // Only add to PnL if we're selling from an existing position
         if (positions[asset].quantity > 0) {
           totalPnL += saleValue - costBasis;
         }
 
-        // Reduce position
         positions[asset].quantity -= trade.quantity;
         if (positions[asset].quantity > 0) {
-          // Reduce cost basis proportionally
           positions[asset].totalCost = positions[asset].quantity * avgCost;
         } else {
           // Reset position if fully sold
@@ -460,13 +449,10 @@ const Portfolio: React.FC<PortfolioProps> = ({
               <h1 className="text-2xl font-light text-white">Portfolio</h1>
               <div className="flex items-center space-x-2 text-gray-400">
                 <span className="text-sm">Last updated: {new Date().toLocaleTimeString()}</span>
-                {/* <button className="p-1 hover:bg-white/5 rounded-lg transition-colors">
-                  <ChevronDown className="w-4 h-4" />
-                </button> */}
+
               </div>
             </div>
             
-            {/* Reduced gap and padding in stats cards */}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-[#111] rounded-xl p-4 border border-[#27272A]">
                 <div className="text-sm text-gray-400">14 Day Volume</div>
@@ -507,7 +493,6 @@ const Portfolio: React.FC<PortfolioProps> = ({
               </div>
             </div>
 
-            {/* Chart section - reduced padding */}
             <div className="bg-[#111] rounded-xl p-6 border border-[#27272A] shadow-lg">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-3">
@@ -550,7 +535,6 @@ const Portfolio: React.FC<PortfolioProps> = ({
             </div>
           </div>
 
-          {/* Bottom section - reduced padding */}
           <div className="flex-1 min-h-0 flex flex-col bg-[#111]/50">
             <div className="flex border-b border-[#27272A] px-6 flex-none">
               <button

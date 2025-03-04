@@ -5,7 +5,6 @@ import USDTIcon from '../assets/usdt.svg';
 import USDCIcon from '../assets/usdc.svg';
 import ETHIcon from '../assets/eth.svg';
 
-// Add these interfaces at the top of the file
 interface TokenData {
   symbol: string;
   icon: string | React.ReactNode;
@@ -14,10 +13,8 @@ interface TokenData {
   iconBg: string;
 }
 
-// Add this type and state
 type SwapType = 'swap' | 'limit';
 
-// Add this after the interfaces
 const AVAILABLE_TOKENS: TokenData[] = [
   {
     symbol: 'ETH',
@@ -52,34 +49,27 @@ function SwapComponent() {
   const [swapDeadline, setSwapDeadline] = useState('30');
   const [customRecipient, setCustomRecipient] = useState(false);
 
-  // Add token data state
-  const [fromToken, setFromToken] = useState<TokenData>(AVAILABLE_TOKENS[0]); // ETH is index 0
+  const [fromToken, setFromToken] = useState<TokenData>(AVAILABLE_TOKENS[0]);
 
-  const [toToken, setToToken] = useState<TokenData>(AVAILABLE_TOKENS[2]); // USDT is index 2
+  const [toToken, setToToken] = useState<TokenData>(AVAILABLE_TOKENS[2]);
 
-  // Add these state variables at the top
   const [slippageDisplay, setSlippageDisplay] = useState('2.00');
   const [deadlineDisplay, setDeadlineDisplay] = useState('30');
 
-  // Add this type and state
   const [activeSwapType, setActiveSwapType] = useState<SwapType>('swap');
   const [limitPrice, setLimitPrice] = useState('');
   const [expiryDays, setExpiryDays] = useState('7');
   const [isExpiryOpen, setIsExpiryOpen] = useState(false);
 
-  // Add this state
   const [enablePartialExecutions, setEnablePartialExecutions] = useState(false);
 
-  // Add loading state for price updates
   const [isPriceLoading, setIsPriceLoading] = useState(false);
 
-  // Add price update animation
   const handlePriceRefresh = () => {
     setIsPriceLoading(true);
     setTimeout(() => setIsPriceLoading(false), 1000);
   };
 
-  // Add swap function
   const handleSwapTokens = () => {
     const tempFromToken = { ...fromToken };
     setFromToken({ ...toToken });
@@ -88,7 +78,6 @@ function SwapComponent() {
     setToAmount(fromAmount);
   };
 
-  // Add the token selection dropdown component
   function TokenDropdown({ 
     isOpen, 
     onClose, 
@@ -100,11 +89,10 @@ function SwapComponent() {
     onClose: () => void; 
     onSelect: (token: TokenData) => void;
     selectedToken: TokenData;
-    excludeToken?: string;  // Symbol of token to exclude
+    excludeToken?: string; 
   }) {
     if (!isOpen) return null;
 
-    // Filter available tokens to exclude the selected token in the other dropdown
     const availableTokens = AVAILABLE_TOKENS.filter(token => token.symbol !== excludeToken);
 
     return (
@@ -144,7 +132,6 @@ function SwapComponent() {
   return (
     <div className="flex-1 flex flex-col items-center pt-1 sm:pt-16 bg-fuel-dark-800">
       <div className="w-full max-w-[420px] mx-auto px-2">
-        {/* Update Swap Type Selector styling */}
         <div className="flex items-center justify-between mb-3 sm:mb-4">
           <div className="flex p-1 bg-fuel-dark-700 rounded-lg">
             <button
@@ -185,7 +172,6 @@ function SwapComponent() {
                         Transaction Settings
                       </h3>
 
-                      {/* Slippage Settings */}
                       <div className="space-y-2 mb-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-1">
@@ -231,7 +217,6 @@ function SwapComponent() {
                         </div>
                       </div>
 
-                      {/* Swap Deadline */}
                       <div className="space-y-2 mb-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-1">
@@ -264,7 +249,6 @@ function SwapComponent() {
                         Interface Settings
                       </h3>
 
-                      {/* Custom Recipient Toggle */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-1">
                           <span className="text-sm text-gray-400">
@@ -288,7 +272,6 @@ function SwapComponent() {
                         </button>
                       </div>
 
-                      {/* Enable Partial Executions Toggle */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-1">
                           <span className="text-sm text-gray-400">
@@ -325,7 +308,6 @@ function SwapComponent() {
           {activeSwapType === "swap" ? (
             // Swap Mode UI
             <>
-              {/* From Token section */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-400 font-medium">From</span>
@@ -375,8 +357,6 @@ function SwapComponent() {
                   <ArrowDownUp className="w-5 h-5 text-fuel-green group-hover:rotate-180 transition-transform duration-200" />
                 </button>
               </div>
-
-              {/* To Token section */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-400 font-medium">To</span>
@@ -418,9 +398,7 @@ function SwapComponent() {
               </div>
             </>
           ) : (
-            // Limit Order Mode UI
             <>
-              {/* Sell Amount Section */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-400 font-medium">Sell amount</span>
@@ -466,7 +444,6 @@ function SwapComponent() {
                 </div>
               </div>
 
-              {/* Limit Price and Expiry Section */}
               <div className="grid grid-cols-3 gap-2 mt-4">
                 <div className="col-span-2">
                   <div className="text-xs text-gray-400 mb-1">
@@ -513,7 +490,6 @@ function SwapComponent() {
                 </div>
               </div>
 
-              {/* Swap Direction Button */}
               <div className="flex justify-center my-4">
                 <button
                   className="p-2 rounded-xl bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-all duration-200 border-4 border-fuel-dark-800 shadow-lg group"
@@ -523,7 +499,6 @@ function SwapComponent() {
                 </button>
               </div>
 
-              {/* Receive Amount Section */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-400 font-medium">Receive at least</span>
@@ -566,7 +541,6 @@ function SwapComponent() {
             </>
           )}
 
-          {/* Additional Info section - stays mostly the same but adapts to mode */}
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-fuel-dark-700/50 backdrop-blur-sm">
               <div className="flex items-center space-x-2">
@@ -622,7 +596,6 @@ function SwapComponent() {
           </div>
         </div>
 
-        {/* Action Button */}
         <div className="mt-4">
           {activeSwapType === "swap" ? (
             <WalletConnect

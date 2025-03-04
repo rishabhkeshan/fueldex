@@ -66,7 +66,6 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center sm:pt-20">
       <div className="bg-fuel-dark-800 w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-[380px] sm:rounded-2xl shadow-2xl sm:mx-4 border border-fuel-dark-600 overflow-auto">
-        {/* Header - Keep sticky */}
         <div className="sticky top-0 z-10 bg-fuel-dark-800 flex items-center justify-between p-2.5 sm:p-3.5 border-b border-fuel-dark-600">
           <h2 className="text-base sm:text-lg font-semibold">Deposit</h2>
           <button 
@@ -77,9 +76,7 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
           </button>
         </div>
 
-        {/* Content - Will scroll if needed */}
         <div className="p-2.5 sm:p-3.5 space-y-3 overflow-y-auto">
-          {/* Network Selection */}
           <div className="space-y-1.5">
             <label className="text-xs text-gray-400 flex items-center space-x-2">
               <span>Network</span>
@@ -129,7 +126,6 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
             </div>
           </div>
 
-          {/* Token Selection */}
           <div className="space-y-1.5">
             <label className="text-xs text-gray-400 flex items-center space-x-2">
               <span>Token</span>
@@ -153,7 +149,6 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
                 <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isTokenOpen ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* Quick Token Selection */}
               <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 mt-1.5">
                 {quickTokensData.map((token) => (
                   <button
@@ -179,7 +174,6 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
             </div>
           </div>
 
-          {/* Amount Input */}
           <div className="space-y-1.5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-0">
               <label className="text-xs text-gray-400 flex items-center space-x-2">
@@ -202,7 +196,6 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
             </div>
           </div>
 
-          {/* Network Fee & APY - Adjusted padding */}
           <div className="space-y-2 bg-fuel-dark-700 p-3 rounded-xl text-xs">
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-2">
@@ -220,7 +213,6 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
             </div>
           </div>
 
-          {/* Connect Button - Adjusted padding */}
           <ConnectButton.Custom>
             {({
               account,
@@ -238,13 +230,10 @@ function DepositModal({ isOpen, onClose }: DepositModalProps) {
                   onClick={account?.address ? openAccountModal : openConnectModal}
                   className="w-full py-3 relative group"
                 >
-                  {/* Gradient background with animated hover */}
                   <div className="absolute inset-0 bg-gradient-to-r from-[#00FFA3] via-[#00FFD1] to-[#00D1FF] rounded-xl opacity-100 group-hover:opacity-90 transition-opacity" />
                   
-                  {/* Glow effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-[#00FFA3] via-[#00FFD1] to-[#00D1FF] rounded-xl blur-xl opacity-30 group-hover:opacity-40 transition-opacity" />
                   
-                  {/* Button content */}
                   <div className="relative flex items-center justify-center space-x-2">
                     <span className="text-fuel-dark-900 font-semibold tracking-wide text-sm sm:text-base">
                       {account?.address 

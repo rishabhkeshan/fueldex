@@ -41,7 +41,6 @@ const PAIR_PRICE_RANGES = {
   }
 } as const;
 
-// Replace the FIXED_ORDERBOOKS constant
 const FIXED_ORDERBOOKS = {
   'ETH/USDT': {
     asks: [
@@ -115,12 +114,10 @@ const FIXED_ORDERBOOKS = {
   }
 } as const;
 
-// Replace the generateMockOrderBook function with fixed data
 const generateMockOrderBook = (pair: TradingPair) => {
   return FIXED_ORDERBOOKS[pair];
 };
 
-// Add these types
 interface HistoricalPrice {
   time: number;
   high: number;
@@ -131,7 +128,6 @@ interface HistoricalPrice {
   volumeto: number;
 }
 
-// Add this function to fetch historical data
 const fetchHistoricalPrices = async (symbol: string, timeframe: string = 'minute', limit: number = 1500) => {
   try {
     const response = await fetch(
@@ -145,13 +141,10 @@ const fetchHistoricalPrices = async (symbol: string, timeframe: string = 'minute
   }
 };
 
-// Update the generateETHPriceHistory function
 const generateETHPriceHistory = async (startPrice: number, baseTimestamp: number) => {
-  // Fetch real ETH price data
   const historicalPrices = await fetchHistoricalPrices('ETH');
   
   if (historicalPrices.length === 0) {
-    // Fallback to synthetic data if API fails
     return generateSyntheticPriceHistory(startPrice, baseTimestamp);
   }
 
@@ -160,10 +153,10 @@ const generateETHPriceHistory = async (startPrice: number, baseTimestamp: number
     close: price.close,
     high: price.high,
     low: price.low,
-    volume: price.volumeto, // Use quote currency volume
-    quantity: price.volumefrom, // Use base currency volume
+    volume: price.volumeto,
+    quantity: price.volumefrom,
     price: price.close,
-    timestamp: price.time * 1000, // Convert to milliseconds
+    timestamp: price.time * 1000,
     time: new Date(price.time * 1000).toLocaleTimeString(),
     type: price.close >= price.open ? 'buy' as const : 'sell' as const
   }));
@@ -174,28 +167,23 @@ const generateSyntheticPriceHistory = (startPrice: number, baseTimestamp: number
   const pricePoints = [
     ...Array.from({ length: 1152 }, (_, i) => {
       const progress = i / 1152;
-      const trend = 50 * Math.sin(progress * Math.PI); // Create a wave pattern
-      const volatility = 20 * (1 + Math.sin(progress * Math.PI * 4)); // Variable volatility
+      const trend = 50 * Math.sin(progress * Math.PI);
+      const volatility = 20 * (1 + Math.sin(progress * Math.PI * 4));
       const noise = (Math.random() - 0.5) * volatility;
       const basePrice = startPrice + trend + noise;
       
-      // Generate more realistic candle data
-      const candleSpread = (5 + Math.random() * 15) * (volatility / 20); // Spread varies with volatility
-      const wickSpread = candleSpread * (1 + Math.random()); // Wicks extend beyond body
-      
-      // Determine if candle is bullish or bearish with slight bullish bias
+      const candleSpread = (5 + Math.random() * 15) * (volatility / 20);
+      const wickSpread = candleSpread * (1 + Math.random());
       const isBullish = Math.random() > 0.48;
       
-      // Calculate OHLC
       const open = basePrice;
       const close = isBullish ? basePrice + candleSpread : basePrice - candleSpread;
       const high = Math.max(open, close) + (Math.random() * wickSpread);
       const low = Math.min(open, close) - (Math.random() * wickSpread);
       
-      // Generate realistic volume
-      const volumeBase = 50000 + Math.random() * 100000; // Increase base volume
+      const volumeBase = 50000 + Math.random() * 100000;
       const volumeSpike = Math.abs(close - open) > candleSpread * 1.5 ? 
-        Math.random() * 200000 : 0; // Larger volume spikes on big moves
+        Math.random() * 200000 : 0;
       const volume = volumeBase + volumeSpike;
       
       return {
@@ -216,7 +204,6 @@ const generateSyntheticPriceHistory = (startPrice: number, baseTimestamp: number
   return pricePoints;
 };
 
-// Mock data for the order book
 const mockOrderBook = {
   asks: [
     { price: 0.04488, size: 150.000, total: 16.40000 },
@@ -236,7 +223,6 @@ const mockOrderBook = {
   ]
 };
 
-// Update the mock trades data to include timestamps
 const mockTrades = [
   { price: 0.04200, quantity: 2488.5714, time: '15:14:33', timestamp: Date.now() - 1000 * 60 * 5 },
   { price: 0.04200, quantity: 1885.9524, time: '15:14:33', timestamp: Date.now() - 1000 * 60 * 4 },
@@ -270,11 +256,10 @@ const mockTrades = [
   { price: 0.04444, quantity: 68001.9068, time: '20:28:55', timestamp: Date.now() - 1000 * 60 * 1 },
 ];
 
-// Add these helper functions at the top of the file, after mock data
 const calculateSpread = (asks: typeof mockOrderBook.asks, bids: typeof mockOrderBook.bids) => {
   if (!asks.length || !bids.length) {
     return {
-      spread: 0,          // Return numbers instead of strings
+      spread: 0,
       spreadPercentage: 0,
       avgPrice: 0
     };
@@ -296,18 +281,16 @@ const calculateSpread = (asks: typeof mockOrderBook.asks, bids: typeof mockOrder
   const avgPrice = (lowestAsk + highestBid) / 2;
   
   return {
-    spread,              // Return raw numbers
+    spread,     
     spreadPercentage,
     avgPrice
   };
 };
 
-// Add this type and constant before the App component
 type TradingPair = 'ETH/USDT' | 'ETH/USDC' | 'USDC/USDT';
 
 const TRADING_PAIRS: TradingPair[] = ['ETH/USDT', 'ETH/USDC', 'USDC/USDT'];
 
-// Add this helper function
 const getTokenIcon = (token: string) => {
   switch (token) {
     case 'ETH':
@@ -321,22 +304,19 @@ const getTokenIcon = (token: string) => {
   }
 };
 
-// Add to your existing types
 interface UserTrade extends Trade {
   type: 'buy' | 'sell';
   timestamp: number;
 }
 
-// Add this type near the top with other types
 type TimeframeOption = {
   label: string;
   minutes: number;
 };
 
-// Add these constants
 const TIMEFRAME_OPTIONS: TimeframeOption[] = [
-  { label: '5s', minutes: 5/60 },  // 5 seconds
-  { label: '1m', minutes: 1 },     // 1 minute
+  { label: '5s', minutes: 5/60 },
+  { label: '1m', minutes: 1 },
   { label: '5m', minutes: 5 },
   { label: '15m', minutes: 15 },
   { label: '1h', minutes: 60 },
@@ -367,7 +347,6 @@ const calculatePriceStats = (trades: Trade[]) => {
   };
 };
 
-// Add this type near the top with other types
 interface Balances {
   available: {
     ETH: number;
@@ -386,7 +365,6 @@ interface Balances {
   };
 }
 
-// Add this function to check if an order can be placed based on available balance
 const checkBalance = (
   type: 'buy' | 'sell',
   size: number,
@@ -419,7 +397,6 @@ const checkBalance = (
   return { hasBalance: true };
 };
 
-// Add this type near other interfaces
 interface AssetBalances {
   available: {
     ETH: number;
@@ -438,7 +415,6 @@ interface AssetBalances {
   };
 }
 
-// Add this function near your other utility functions
 const calculateOrderBookPressure = (orderBook: OrderBook) => {
   const totalBuyVolume = orderBook.bids.reduce((sum, bid) => sum + bid.size, 0);
   const totalSellVolume = orderBook.asks.reduce((sum, ask) => sum + ask.size, 0);
@@ -1441,7 +1417,6 @@ function App() {
                 </svg>
               </button>
 
-              {/* Settings Dropdown */}
               {isSettingsOpen && (
                 <div className="absolute right-0 mt-2 w-64 rounded-lg shadow-lg bg-fuel-dark-800 border border-fuel-dark-600 z-50">
                   <div className="p-2">
@@ -1529,15 +1504,11 @@ function App() {
           <>
             {/* Mobile View Content */}
             <div className="sm:hidden flex flex-col h-full">
-              {/* Main Content Area - Adjust height to leave space for orders/history */}
               <div className="flex-1 min-h-0 flex flex-col">
                 {showMobileTradeForm ? (
-                  // Show trade form and orderbook when trade type is selected
                   <div className="h-[calc(100vh-300px)]">
                     {" "}
-                    {/* Increased height by removing slider height */}
                     <div className="flex h-full">
-                      {/* Trade Form - Increased width */}
                       <div className="w-3/5 p-3 border-r border-fuel-dark-600">
                         <button
                           onClick={() => setShowMobileTradeForm(false)}
@@ -1547,7 +1518,6 @@ function App() {
                         </button>
 
                         <div className="space-y-2">
-                          {/* Buy/Sell Tabs */}
                           <div className="flex mb-2">
                             <button
                               className={`flex-1 py-1.5 text-xs font-medium rounded-l transition-colors outline-none
@@ -1573,7 +1543,6 @@ function App() {
                             </button>
                           </div>
 
-                          {/* Order Type Dropdown */}
                           <div className="relative">
                             <button
                               className="w-full bg-fuel-dark-700 rounded p-1.5 text-xs flex items-center justify-between"
@@ -1600,7 +1569,7 @@ function App() {
                                   onClick={() => {
                                     setOrderType("market");
                                     setIsOrderTypeDropdownOpen(false);
-                                    setPrice(""); // Clear price when switching to market
+                                    setPrice("");
                                   }}
                                 >
                                   Market
@@ -1693,16 +1662,13 @@ function App() {
                         </div>
                       </div>
 
-                      {/* Orderbook - Decreased width and removed total column */}
                       <div className="w-2/5 flex flex-col h-full">
                         <div className="p-2 flex flex-col h-full">
-                          {/* Header - Updated grid */}
                           <div className="text-[10px] grid grid-cols-2 text-gray-400 mb-2">
                             <span>Price</span>
                             <span className="text-right">Amount</span>
                           </div>
 
-                          {/* Asks - Updated grid */}
                           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
                             <div className="space-y-0.5">
                               {orderBook.asks.map((order, i) => (
@@ -1727,7 +1693,6 @@ function App() {
                             </div>
                           </div>
 
-                          {/* Spread - No changes needed to layout */}
                           <div className="py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700">
                             <div className="text-fuel-green text-xs sm:text-sm font-medium text-center">
                               {calculateSpread(
@@ -1750,7 +1715,6 @@ function App() {
                             </div>
                           </div>
 
-                          {/* Bids - Updated grid */}
                           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
                             <div className="space-y-0.5">
                               {orderBook.bids.map((order, i) => (
@@ -1779,10 +1743,8 @@ function App() {
                     </div>
                   </div>
                 ) : (
-                  // Show different views based on mobileView state
                   <div className="h-[calc(100vh-350px)]">
                     {" "}
-                    {/* Changed from 450px to 350px */}
                     {mobileView === "chart" && (
                       <>
                         {!showChart ? (
@@ -1800,14 +1762,12 @@ function App() {
                     {mobileView === "orderbook" && (
                       <div className="h-full flex flex-col">
                         <div className="p-2 flex flex-col h-full">
-                          {/* Header */}
                           <div className="text-[10px] grid grid-cols-3 text-gray-400 mb-2">
                             <span>Price</span>
                             <span className="text-right">Amount</span>
                             <span className="text-right">Total</span>
                           </div>
 
-                          {/* Asks - Separate scrollable section */}
                           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
                             <div className="space-y-0.5">
                               {orderBook.asks.map((order, i) => (
@@ -1835,7 +1795,6 @@ function App() {
                             </div>
                           </div>
 
-                          {/* Spread - Fixed position */}
                           <div className="py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700">
                             <div className="text-fuel-green text-xs sm:text-sm font-medium text-center">
                               {calculateSpread(
@@ -1858,7 +1817,6 @@ function App() {
                             </div>
                           </div>
 
-                          {/* Bids - Separate scrollable section */}
                           <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
                             <div className="space-y-0.5">
                               {orderBook.bids.map((order, i) => (
@@ -1927,10 +1885,8 @@ function App() {
                   </div>
                 )}
 
-                {/* Orders/History Section - Reduced height */}
                 <div className="h-[200px] bg-fuel-dark-800 border-t border-fuel-dark-600">
                   {" "}
-                  {/* Changed from 300px to 200px */}
                   <div className="flex border-b border-fuel-dark-600">
                     <button
                       className={`flex-1 py-2 text-center text-sm font-medium transition-colors outline-none
@@ -1963,11 +1919,9 @@ function App() {
                   </div>
                   <div className="overflow-auto h-[calc(200px-40px)]">
                     {" "}
-                    {/* Changed from 300px to 200px */}
                     {mobileBottomView === "orders" ? (
                       activeOrders.length > 0 ? (
                         <div>
-                          {/* Table Headers */}
                           <div className="grid grid-cols-5 text-[10px] text-gray-400 p-2 border-b border-fuel-dark-600">
                             <div>Date</div>
                             <div>Pair</div>
@@ -2035,7 +1989,6 @@ function App() {
                           <div>Amount</div>
                           <div>Price</div>
                         </div>
-                        {/* Table Content */}
                         <div className="divide-y divide-fuel-dark-600">
                           {orderHistory.map((order) => (
                             <div
@@ -2081,7 +2034,6 @@ function App() {
                 </div>
               </div>
 
-              {/* Buy/Sell Buttons - Only show when trade form is not visible */}
               {!showMobileTradeForm && (
                 <div className="border-t border-fuel-dark-600 p-2 grid grid-cols-2 gap-2">
                   <button
@@ -2106,19 +2058,9 @@ function App() {
               )}
             </div>
 
-            {/* Desktop View - Hide on mobile */}
             <div className="hidden sm:flex flex-1 min-h-0 p-2 gap-2">
-              {" "}
-              {/* Add padding and gap */}
-              {/* Left section containing Chart, Orderbook/Trades, and Orders/History */}
               <div className="flex-1 flex flex-col gap-2">
-                {" "}
-                {/* Add gap */}
-                {/* Top section with Chart and Orderbook/Trades */}
                 <div className="flex flex-1 overflow-hidden gap-2">
-                  {" "}
-                  {/* Add gap */}
-                  {/* Chart */}
                   <div
                     className={`${
                       orderBookLayout === "tabs"
@@ -2126,12 +2068,7 @@ function App() {
                         : "w-[calc(100%-500px)]"
                     } bg-fuel-dark-800 border-r border-fuel-dark-600 flex flex-col overflow-hidden rounded-lg`}
                   >
-                    {" "}
-                    {/* Add flex flex-col overflow-hidden */}
-                    {/* Add trading pair header */}
                     <div className="shrink-0 p-3 border-b border-fuel-dark-600">
-                      {" "}
-                      {/* Add shrink-0 */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="flex items-center justify-between sm:justify-start">
@@ -2183,7 +2120,6 @@ function App() {
                                     />
                                   </div>
 
-                                  {/* Table Header */}
                                   <div className="grid grid-cols-6 gap-4 px-4 py-2 border-b border-fuel-dark-600 text-[11px] text-gray-400">
                                     <div className="col-span-2">Asset Pair</div>
                                     <div className="text-right">Price</div>
@@ -2194,7 +2130,6 @@ function App() {
                                     <div className="text-right">24h Volume</div>
                                   </div>
 
-                                  {/* Market pairs list */}
                                   <div className="max-h-[300px] overflow-y-auto">
                                     {TRADING_PAIRS.filter((pair) =>
                                       pair
@@ -2218,7 +2153,6 @@ function App() {
                                           }}
                                         >
                                           <div className="grid grid-cols-6 gap-4 items-center">
-                                            {/* Asset Pair */}
                                             <div className="flex items-center space-x-3 col-span-2">
                                               <div className="flex -space-x-2">
                                                 <img
@@ -2239,12 +2173,10 @@ function App() {
                                               </div>
                                             </div>
 
-                                            {/* Price */}
                                             <div className="text-right text-[11px]">
                                               ${stats?.last.toFixed(2)}
                                             </div>
 
-                                            {/* 24h Change */}
                                             <div
                                               className={`text-right text-[11px] ${
                                                 stats?.change >= 0
@@ -2256,7 +2188,6 @@ function App() {
                                               {stats?.change.toFixed(2)}%
                                             </div>
 
-                                            {/* 24h High/Low Combined */}
                                             <div className="text-right text-[11px] text-gray-200">
                                               <div>
                                                 ${stats?.high.toFixed(2)}
@@ -2266,7 +2197,6 @@ function App() {
                                               </div>
                                             </div>
 
-                                            {/* 24h Volume */}
                                             <div className="text-right text-[11px] text-gray-200">
                                               {(
                                                 stats?.volume || 0
@@ -2347,16 +2277,13 @@ function App() {
                       </>
                     </div>
                   </div>
-                  {/* Order Book/Trades Column */}
                   <div
                     className={`${
                       orderBookLayout === "tabs" ? "w-[250px]" : "w-[500px]"
                     } flex flex-col min-h-0 border-r border-fuel-dark-600 bg-fuel-dark-800 rounded-lg`}
                   >
-                    {/* Header with tabs and menu */}
                     <div className="flex items-center justify-between border-b border-fuel-dark-600 pr-2">
                       {orderBookLayout === "tabs" ? (
-                        // Tabs layout header
                         <div className="flex flex-1 relative">
                           <button
                             className={`flex-1 py-2 text-center text-xs font-medium transition-colors outline-none
@@ -2386,7 +2313,6 @@ function App() {
                           >
                             Trades
                           </button>
-                          {/* Sliding indicator */}
                           <div
                             className="absolute bottom-0 h-0.5 bg-fuel-green transition-all duration-300 ease-in-out"
                             style={{
@@ -2396,7 +2322,6 @@ function App() {
                           />
                         </div>
                       ) : (
-                        // Side by side layout header
                         <div className="flex-1 flex">
                           <div className="flex-1 py-2 text-center text-xs font-medium text-fuel-green">
                             Order Book
@@ -2407,7 +2332,6 @@ function App() {
                         </div>
                       )}
 
-                      {/* Layout toggle menu */}
                       <div className="relative group">
                         <button className="p-1 hover:bg-fuel-dark-700 rounded-full">
                           <svg
@@ -2421,7 +2345,6 @@ function App() {
                           </svg>
                         </button>
                         <div className="absolute right-0 top-full mt-1 bg-fuel-dark-700 rounded shadow-lg border border-fuel-dark-600 hidden group-hover:block z-50 min-w-[50px]">
-                          {/* Add padding to create a hover area between button and menu */}
                           <div className="absolute -top-2 left-0 right-0 h-2" />
                           <button
                             className={`w-full px-4 py-2 text-left text-xs hover:bg-fuel-dark-600 transition-colors outline-none ${
@@ -2447,9 +2370,7 @@ function App() {
                       </div>
                     </div>
 
-                    {/* Content */}
                     {orderBookLayout === "tabs" ? (
-                      // Tabs layout
                       <div className="flex-1 flex flex-col overflow-hidden">
                         {activeView === "orderbook" ? (
                           <div className="h-full flex flex-col">
@@ -2464,9 +2385,7 @@ function App() {
                                 <span className="text-right">Total</span>
                               </div>
 
-                              {/* Scrollable areas */}
                               <div className="flex-1 flex flex-col min-h-0">
-                                {/* Asks */}
                                 <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
                                   <div className="flex flex-col-reverse space-y-reverse space-y-[6px]">
                                     {orderBook.asks.map((order, i) => (
@@ -2499,7 +2418,6 @@ function App() {
                                   </div>
                                 </div>
 
-                                {/* Spread section */}
                                 <div className="py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700 flex flex-col items-center justify-center">
                                   <div className="text-fuel-green text-[8px] sm:text-[12px] font-medium">
                                     {calculateSpread(
@@ -2522,7 +2440,6 @@ function App() {
                                   </div>
                                 </div>
 
-                                {/* Bids */}
                                 <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
                                   <div className="space-y-[6px]">
                                     {orderBook.bids.map((order, i) => (
@@ -2560,7 +2477,6 @@ function App() {
                         ) : (
                           <div className="h-full flex flex-col overflow-hidden">
                             <div className="p-2 flex flex-col h-full">
-                              {/* Header */}
                               <div
                                 className="text-[8px] sm:text-[10px] grid grid-cols-3 text-gray-400 mb-2 p-1.5"
                                 style={{ gridTemplateColumns: "30% 25% 45%" }}
@@ -2570,7 +2486,6 @@ function App() {
                                 <span className="text-right">Time</span>
                               </div>
 
-                              {/* Scrollable trades */}
                               <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
                                 <div className="space-y-[2px]">
                                   {trades.map((trade, i) => (
@@ -2610,13 +2525,10 @@ function App() {
                         )}
                       </div>
                     ) : (
-                      // Side by side layout
                       <div className="flex-1 flex overflow-hidden">
-                        {/* Orderbook */}
                         <div className="flex-1 border-r border-fuel-dark-600">
                           <div className="h-full flex flex-col">
                             <div className="p-2 flex flex-col h-full">
-                              {/* Header */}
                               <div
                                 className="text-[8px] sm:text-[12px] grid grid-cols-3 text-gray-300 mb-2 p-1.5"
                                 style={{ gridTemplateColumns: "30% 30% 40%" }}
@@ -2625,10 +2537,7 @@ function App() {
                                 <span className="text-right">Amount</span>
                                 <span className="text-right">Total</span>
                               </div>
-
-                              {/* Scrollable areas */}
                               <div className="flex-1 flex flex-col min-h-0">
-                                {/* Asks */}
                                 <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
                                   <div className="flex flex-col-reverse space-y-reverse space-y-[6px]">
                                     {orderBook.asks.map((order, i) => (
@@ -2661,7 +2570,6 @@ function App() {
                                   </div>
                                 </div>
 
-                                {/* Spread section */}
                                 <div className="py-1.5 space-y-1 border-y border-fuel-dark-600 bg-fuel-dark-700 flex flex-col items-center justify-center">
                                   <div className="text-fuel-green text-[8px] sm:text-[12px] font-medium">
                                     {calculateSpread(
@@ -2684,7 +2592,6 @@ function App() {
                                   </div>
                                 </div>
 
-                                {/* Bids */}
                                 <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
                                   <div className="space-y-[6px]">
                                     {orderBook.bids.map((order, i) => (
@@ -2721,11 +2628,9 @@ function App() {
                           </div>
                         </div>
 
-                        {/* Trades */}
                         <div className="flex-1">
                           <div className="h-full flex flex-col overflow-hidden">
                             <div className="p-2 flex flex-col h-full">
-                              {/* Header */}
                               <div
                                 className="text-[8px] sm:text-[10px] grid grid-cols-3 text-gray-400 mb-2 p-1.5"
                                 style={{ gridTemplateColumns: "30% 25% 45%" }}
@@ -2735,7 +2640,6 @@ function App() {
                                 <span className="text-right">Time</span>
                               </div>
 
-                              {/* Scrollable trades */}
                               <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-600 scrollbar-track-transparent">
                                 <div className="space-y-[2px]">
                                   {trades.map((trade, i) => (
@@ -2831,7 +2735,6 @@ function App() {
                     </div>
                   </div>
                 </div>
-                {/* Bottom section for Orders and History */}
                 <div className="h-[200px] bg-fuel-dark-800 border-t border-fuel-dark-600 rounded-lg">
                   <div className="flex border-b border-fuel-dark-600">
                     <button
@@ -2868,7 +2771,6 @@ function App() {
                     {mobileBottomView === "orders" ? (
                       activeOrders.length > 0 ? (
                         <div>
-                          {/* Table Headers */}
                           <div className="grid grid-cols-5 text-[10px] text-gray-400 p-2 border-b border-fuel-dark-600">
                             <div>Date</div>
                             <div>Pair</div>
@@ -2928,7 +2830,6 @@ function App() {
                       )
                     ) : orderHistory.length > 0 ? (
                       <div>
-                        {/* Table Headers */}
                         <div className="grid grid-cols-5 text-[10px] text-gray-400 p-2 border-b border-fuel-dark-600">
                           <div>Date</div>
                           <div>Pair</div>
@@ -2936,7 +2837,6 @@ function App() {
                           <div>Amount</div>
                           <div>Price</div>
                         </div>
-                        {/* Table Content */}
                         <div className="divide-y divide-fuel-dark-600">
                           {orderHistory.map((order) => (
                             <div
@@ -2981,10 +2881,8 @@ function App() {
                   </div>
                 </div>
               </div>
-              {/* Right section for Trading Interface */}
               <div className="w-[260px] flex flex-col min-h-0 border-l border-fuel-dark-600 bg-fuel-dark-800 rounded-lg">
                 <div className="p-3">
-                  {/* Market/Limit Tabs with sliding indicator */}
                   <div className="mb-3">
                     <div className="flex relative">
                       <button
@@ -2997,7 +2895,7 @@ function App() {
                         onClick={() => {
                           setOrderType("market");
                           setSliderPosition(0);
-                          setPrice(""); // Clear price when switching to market
+                          setPrice("");
                         }}
                       >
                         Market
@@ -3016,7 +2914,6 @@ function App() {
                       >
                         Limit
                       </button>
-                      {/* Sliding indicator */}
                       <div
                         className="absolute bottom-0 h-0.5 bg-fuel-green transition-all duration-300 ease-in-out"
                         style={{
@@ -3027,7 +2924,6 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Buy/Sell Buttons */}
                   <div className="flex mb-3">
                     <button
                       className={`flex-1 py-1 text-sm font-medium rounded-l transition-colors outline-none
@@ -3058,9 +2954,7 @@ function App() {
                     {/* Show price input only for limit orders */}
                     {orderType === "limit" && (
                       <div>
-                        {/* <div className="flex justify-between text-sm mb-1">
-                          <span className="text-gray-400">Price</span>
-                        </div> */}
+
                         <input
                           type="number"
                           className="w-full bg-fuel-dark-700 rounded p-2 text-sm"
@@ -3072,10 +2966,7 @@ function App() {
                     )}
 
                     <div>
-                      {/* <div className="flex justify-between text-xs mb-1">
-                        <span className="text-gray-400">Order size</span>
-                        <span className="text-gray-400">MAX</span>
-                      </div> */}
+
                       <div className="flex space-x-2">
                         <input
                           type="number"
@@ -3180,7 +3071,6 @@ function App() {
         />
       )}
 
-      {/* Add the status bar */}
       <div className="fixed bottom-0 left-0 right-0 h-6 bg-fuel-dark-800 border-t border-fuel-dark-600 px-4 flex items-center justify-between text-xs">
         <div className="flex items-center space-x-2">
           <div className="flex items-center space-x-1.5">

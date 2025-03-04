@@ -61,7 +61,6 @@ export function MobileP2PLayout({
   if (showTradingView) {
     return (
       <div className="flex flex-col h-full bg-fuel-dark-900">
-        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-fuel-dark-600">
           <button 
             onClick={() => setShowTradingView(false)}
@@ -75,11 +74,8 @@ export function MobileP2PLayout({
           <div className="w-8" />
         </div>
 
-        {/* Content */}
         <div className="flex flex-col h-full overflow-hidden">
-          {/* Trading Form */}
           <div className="p-4 border-b border-fuel-dark-600">
-            {/* Price Input */}
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-400">Price</span>
@@ -98,7 +94,6 @@ export function MobileP2PLayout({
               </div>
             </div>
 
-            {/* Amount Input */}
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-400">Amount</span>
@@ -114,7 +109,6 @@ export function MobileP2PLayout({
               </div>
             </div>
 
-            {/* Total */}
             <div className="bg-fuel-dark-900 rounded-lg p-3">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-400">Total</span>
@@ -123,9 +117,7 @@ export function MobileP2PLayout({
             </div>
           </div>
 
-          {/* Orderbook */}
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Sticky Header */}
             <div className="sticky top-0 z-10 bg-fuel-dark-900 p-4 border-b border-fuel-dark-600">
               <div className="text-xs text-gray-400 grid grid-cols-4 gap-4">
                 <div>Price ({quoteToken})</div>
@@ -135,7 +127,6 @@ export function MobileP2PLayout({
               </div>
             </div>
 
-            {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto">
               <div className="p-4 space-y-1">
                 {orderBook[selectedPair]
@@ -181,7 +172,6 @@ export function MobileP2PLayout({
             </div>
           </div>
 
-          {/* Place Order Button */}
           <div className="p-4 border-t border-fuel-dark-600">
             <button 
               className={`w-full py-4 text-sm font-medium rounded transition-colors
@@ -201,9 +191,7 @@ export function MobileP2PLayout({
 
   return (
     <div className="flex flex-col h-full bg-fuel-dark-900">
-      {/* Header */}
       <div className="flex flex-col p-4 border-b border-fuel-dark-600">
-        {/* Top Row - Pair Selector and Stats */}
         <div className="flex items-center justify-between mb-3">
           <div className="relative">
             <button
@@ -270,7 +258,6 @@ export function MobileP2PLayout({
           </div>
         </div>
 
-        {/* Bottom Row - Volume Stats */}
         <div className="flex items-center justify-between text-xs">
           <div className="text-gray-400">
             <span>24h Vol </span>
@@ -286,9 +273,7 @@ export function MobileP2PLayout({
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
-        {/* Order Book */}
         <div className="p-4">
           <div className="text-xs text-gray-400 grid grid-cols-4 gap-4 mb-2">
             <div>Price ({quoteToken})</div>
@@ -297,7 +282,6 @@ export function MobileP2PLayout({
             <div></div>
           </div>
 
-          {/* Sell Orders - Fixed height with scroll */}
           <div className="mb-2">
             <div className="h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-700 scrollbar-track-transparent">
               <div className="space-y-0.5">
@@ -339,7 +323,6 @@ export function MobileP2PLayout({
             </div>
           </div>
 
-          {/* Current Price */}
           <div className="text-center py-2 text-sm bg-fuel-dark-800 rounded-lg mb-2">
             <span className="text-gray-400">Last Price: </span>
             <span className="text-white">{pairStats[selectedPair].lastPrice}</span>
@@ -348,7 +331,6 @@ export function MobileP2PLayout({
             </span>
           </div>
 
-          {/* Buy Orders - Fixed height with scroll */}
           <div>
             <div className="h-[200px] overflow-y-auto scrollbar-thin scrollbar-thumb-fuel-dark-700 scrollbar-track-transparent">
               <div className="space-y-0.5">
@@ -391,9 +373,7 @@ export function MobileP2PLayout({
           </div>
         </div>
 
-        {/* Recent Trades and My Orders Tabs */}
         <div className="border-t border-fuel-dark-600 mb-20">
-          {/* Tab Navigation */}
           <div className="flex items-center space-x-2 px-4 py-3 border-b border-fuel-dark-600 bg-fuel-dark-800">
             <button
               className={`text-sm font-medium transition-colors outline-none
@@ -412,10 +392,8 @@ export function MobileP2PLayout({
             </button>
           </div>
 
-          {/* Tab Content */}
           <div className="p-4">
             {activeTab === 'trades' ? (
-              // Recent Trades Content
               <div className="space-y-2">
                 {recentTrades.slice(0, 10).map((trade, index) => (
                   <div key={index} className="grid grid-cols-4 text-sm items-center">
@@ -439,7 +417,6 @@ export function MobileP2PLayout({
                 ))}
               </div>
             ) : (
-              // My Orders Content
               <div>
                 {userOrders.length === 0 ? (
                   <div className="text-center text-gray-400 py-4">No orders yet</div>
@@ -470,7 +447,6 @@ export function MobileP2PLayout({
           </div>
         </div>
 
-        {/* Buy/Sell Buttons */}
         <div className="fixed bottom-0 left-0 right-0 p-2 grid grid-cols-2 gap-2 border-t border-fuel-dark-600 bg-fuel-dark-800">
           <button
             onClick={() => handleMobileTradeClick('buy')}

@@ -331,7 +331,6 @@ const TradingViewAdvancedWidget = ({ trades, selectedPair }: TradingViewAdvanced
         backgroundColor: "#111111",
         foregroundColor: "#1c1c1c" 
       },
-      custom_css_url: "./themed.css",
       toolbar_bg: "#111111",
       time_frames: [
         { text: "1D", resolution: "1", description: "1 Day" },

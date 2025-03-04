@@ -194,17 +194,14 @@ const useIsMobile = () => {
   const [isMobile, setIsMobile] = useState(false); // Initialize as false to prevent hydration mismatch
 
   useEffect(() => {
-    // Initial check
     setIsMobile(window.innerWidth < 768);
 
-    // Add resize listener
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
 
     window.addEventListener('resize', handleResize);
 
-    // Cleanup
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -304,25 +301,22 @@ function P2PComponent() {
         total: matchAmount * matchedOrder.price
       };
 
-      // Update recent trades
       setRecentTrades(prev => [trade, ...prev]);
 
-      // Create user order with correct status
       const userOrder: UserOrder = {
         ...newOrder,
-        price: matchedOrder.price, // Use matched price
+        price: matchedOrder.price,
         status: matchAmount < newOrder.amount ? 'partial' : 'filled',
         filled: matchAmount,
         timestamp: Date.now()
       };
       setUserOrders(prev => [userOrder, ...prev]);
 
-      // Update the orderbook
       const updatedOrders = existingOrders.map(order => {
         if (order.id === matchedOrder.id) {
           const remainingAmount = order.amount - matchAmount;
           if (remainingAmount <= 0) {
-            return null; // Remove fully filled order
+            return null;
           }
           return {
             ...order,
@@ -358,10 +352,8 @@ function P2PComponent() {
       timestamp: Date.now(),
     };
 
-    // Check if order can be matched
     const isMatched = matchOrder(newOrder);
 
-    // Only add to orderbook and user orders if not matched
     if (!isMatched) {
       const userOrder: UserOrder = {
         ...newOrder,
@@ -371,14 +363,12 @@ function P2PComponent() {
       };
       setUserOrders(prev => [userOrder, ...prev]);
 
-      // Add to orderbook
       setOrderBook(prev => ({
         ...prev,
         [selectedPair]: [...prev[selectedPair], newOrder]
       }));
     }
 
-    // Reset form
     setAmount('');
     setPrice('');
   };
@@ -394,7 +384,6 @@ function P2PComponent() {
   };
 
   const getRandomPrice = (basePrice: number, spread: number, pair: string) => {
-    // Special handling for USDC/USDT pair
     if (pair === 'USDC/USDT') {
       const baseStablePrice = 1.00;
       const stableSpread = 0.02; // This gives us range of 0.98 to 1.02
@@ -402,7 +391,6 @@ function P2PComponent() {
       return Number((baseStablePrice + variation).toFixed(4));
     }
     
-    // Normal price generation for other pairs
     const variation = (Math.random() - 0.5) * 2 * spread;
     return Number((basePrice + variation).toFixed(2));
   };
@@ -415,12 +403,10 @@ function P2PComponent() {
       const shouldMatchExisting = Math.random() > 0.5 && existingOrders.length > 0;
 
       if (shouldMatchExisting) {
-        // Pick a random existing order to match
         const orderToMatch = existingOrders[Math.floor(Math.random() * existingOrders.length)];
         const matchingPrice = orderToMatch.price;
         const matchingAmount = Math.min(orderToMatch.amount, getRandomAmount(0.1, orderToMatch.amount));
         
-        // Create matching order with opposite type
         const newOrder: Order = {
           id: generateOrderId(),
           price: matchingPrice,
@@ -431,7 +417,6 @@ function P2PComponent() {
           fillType: 'PARTIAL'
         };
 
-        // Create the trade
         const trade: Trade = {
           timestamp: new Date().toLocaleTimeString([], { hour12: false }),
           type: newOrder.type,
@@ -441,7 +426,6 @@ function P2PComponent() {
           total: matchingPrice * matchingAmount
         };
 
-        // Update orderbook - remove or reduce the matched order
         const updatedOrders = existingOrders.map(order => {
           if (order.id === orderToMatch.id) {
             const remainingAmount = order.amount - matchingAmount;
@@ -461,16 +445,13 @@ function P2PComponent() {
           [pair]: updatedOrders
         }));
         setRecentTrades(prev => [trade, ...prev.slice(0, 49)]);
-
-        // Update pair stats
         updatePairStats(pair as TradingPair, trade);
 
       } else {
-        // Create a new order
         const basePrice = pair === 'USDC/USDT' ? 1.00 : 2150.81;
         const type = Math.random() > 0.5 ? 'buy' : 'sell';
         const amount = pair === 'USDC/USDT' 
-          ? getRandomAmount(100, 10000) // Larger amounts for stablecoin pairs
+          ? getRandomAmount(100, 10000)
           : getRandomAmount(0.1, 2);
         const price = getRandomPrice(basePrice, 5, pair);
 
@@ -484,13 +465,11 @@ function P2PComponent() {
           fillType: 'PARTIAL'
         };
 
-        // Add to orderbook
         setOrderBook(prev => ({
           ...prev,
           [pair]: [newOrder, ...prev[pair]]
         }));
 
-        // Add to recent trades
         const trade: Trade = {
           timestamp: new Date().toLocaleTimeString([], { hour12: false }),
           type,
@@ -580,7 +559,6 @@ function P2PComponent() {
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-fuel-dark-900">
-      {/* Header - add min-height to prevent shrinking */}
       <div className="flex items-center justify-between p-4 border-b border-fuel-dark-600 min-h-[72px] flex-shrink-0">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
@@ -677,13 +655,9 @@ function P2PComponent() {
         </div>
       </div>
 
-      {/* Main content - update to be more flexible */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Main content wrapper - make scrollable if needed */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Order Book - update height calculation */}
           <div className="flex flex-1 border-r border-fuel-dark-600 min-h-0">
-            {/* Buy Orders - make scrollable */}
             <div className="flex-1 p-4 border-r border-fuel-dark-600 flex flex-col min-h-0 overflow-hidden">
               <div className="text-xs text-gray-400 grid grid-cols-4 mb-2 flex-shrink-0">
                 <div>Price {quoteToken}</div>
@@ -780,9 +754,7 @@ function P2PComponent() {
             </div>
           </div>
 
-          {/* Recent Trades Section */}
           <div className="h-[250px] min-h-[250px] border-t border-fuel-dark-600 flex flex-col flex-shrink-0">
-            {/* Tab Navigation */}
             <div className="flex items-center space-x-2 px-4 py-3 border-b border-fuel-dark-600 bg-fuel-dark-800">
               <button
                 className={`text-sm font-medium transition-colors outline-none
@@ -801,7 +773,6 @@ function P2PComponent() {
               </button>
             </div>
 
-            {/* Tab Content */}
             <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-fuel-dark-700 scrollbar-track-transparent hover:scrollbar-thumb-fuel-dark-600">
               {activeTab === 'trades' ? (
                 // Recent Trades Content
@@ -861,7 +832,6 @@ function P2PComponent() {
                   </div>
                 </div>
               ) : (
-                // My Orders Content
                 <div className="p-4">
                   <div className="grid grid-cols-7 text-xs text-gray-400 mb-3 px-2">
                     <div>Date</div>
@@ -957,9 +927,7 @@ function P2PComponent() {
           </div>
         </div>
 
-        {/* Trading Interface - make it scrollable and set min-width */}
         <div className="w-[350px] min-w-[350px] border-l border-fuel-dark-600 bg-fuel-dark-800 flex flex-col overflow-hidden">
-          {/* Trading Form */}
           <div className="p-4 flex-shrink-0">
             <div className="flex items-center mb-4">
               <div className="flex items-center space-x-2">
@@ -976,13 +944,9 @@ function P2PComponent() {
                   />
                 </div>
                 <span className="text-lg">{selectedPair}</span>
-                {/* <span className="text-xs px-2 py-0.5 rounded bg-fuel-dark-700">
-                  {price || '2150.81'} {quoteToken}
-                </span> */}
               </div>
             </div>
 
-            {/* Buy/Sell Toggle */}
             <div className="flex mb-4">
               <button
                 className={`flex-1 py-2 text-sm font-medium rounded-l transition-colors
@@ -1000,7 +964,6 @@ function P2PComponent() {
               </button>
             </div>
 
-            {/* Price Input */}
             <div className="mb-6">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-400">PRICE</span>
@@ -1019,11 +982,9 @@ function P2PComponent() {
               </div>
             </div>
 
-            {/* Amount Input */}
             <div className="mb-6">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-400">AMOUNT</span>
-                {/* Only show balance when selling */}
                 {!isBuying && (
                   <span className="text-xs text-gray-400">
                     Balance <span className="text-white">0 {baseToken}</span>
@@ -1049,10 +1010,8 @@ function P2PComponent() {
               </div>
             </div>
 
-            {/* Total Section */}
             <div className="bg-fuel-dark-900 rounded-lg p-3 mb-4">
               <div className="flex flex-col space-y-2">
-                {/* Show quote token balance when buying */}
                 {isBuying && (
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-400">Balance</span>
@@ -1070,7 +1029,6 @@ function P2PComponent() {
               </div>
             </div>
 
-            {/* Connect Wallet Button */}
             <button 
               className={`w-full py-3 text-sm font-medium cursor-pointer rounded transition-colors
                 ${isBuying 
