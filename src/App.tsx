@@ -1321,7 +1321,7 @@ function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowChart(true);
-    }, 1000);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);

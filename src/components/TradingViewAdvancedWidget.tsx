@@ -235,6 +235,7 @@ const TradingViewAdvancedWidget = ({ trades, selectedPair }: TradingViewAdvanced
       container: chartContainerRef.current,
       library_path: "../../charting_library_cloned_data/charting_library/",
       locale: "en",
+      custom_css_url: "./tradingview-chart.css",
       fullscreen: false,
       autosize: true,
       theme: "dark",
