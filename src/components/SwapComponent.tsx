@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowDownUp, Info, Settings, Loader2, Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import WalletConnect from './WalletConnect';
-import { Address, bn, BN, createAssetId, ScriptTransactionRequest, ZeroBytes32 } from 'fuels';
+import { Address, bn, BN, ScriptTransactionRequest, WalletUnlocked, Wallet, Provider } from 'fuels';
 import ETHIcon from '../assets/eth.svg';
 import FUELIcon from '../assets/fuelsymbol.svg';
 import BTCIcon from '../assets/solvBTC.webp';
 import USDCIcon from '../assets/usdc.svg';
-import { useWallet, useBalance } from '@fuels/react';
+import { useWallet, useBalance, useIsConnected } from '@fuels/react';
 import axios from 'axios';
+const BASE_ASSET_ID =
+  "0xf8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07";
 
 interface TokenData {
   symbol: string;
@@ -26,7 +28,7 @@ const BASE_URL = "https://fuelstation-mainnet.xyz";
 const AVAILABLE_TOKENS: TokenData[] = [
   {
     symbol: "ETH",
-    icon: <img src={ETHIcon} alt="ETH" className="w-6 h-6 sm:w-8 sm:h-8" />,
+    icon: <img src={ETHIcon} alt="ETH" className="w-5 h-5 sm:w-6 sm:h-6" />,
     balance: "0.476402",
     assetID:
       "0x143cd7c86d87664e926965c623cb9979aac62e751426feb7102fac0338e17f3b",
@@ -35,7 +37,7 @@ const AVAILABLE_TOKENS: TokenData[] = [
   },
   {
     symbol: "USDC",
-    icon: <img src={USDCIcon} alt="USDC" className="w-6 h-6 sm:w-8 sm:h-8" />,
+    icon: <img src={USDCIcon} alt="USDC" className="w-5 h-5 sm:w-6 sm:h-6" />,
     balance: "1,234.56",
     assetID:
       "0x6359423c4a652e99e14677546fef12fc0946ca577c7eebc16202dc47467b09be",
@@ -44,7 +46,7 @@ const AVAILABLE_TOKENS: TokenData[] = [
   },
   {
     symbol: "FUEL",
-    icon: <img src={FUELIcon} alt="FUEL" className="w-6 h-6 sm:w-8 sm:h-8" />,
+    icon: <img src={FUELIcon} alt="FUEL" className="w-5 h-5 sm:w-6 sm:h-6" />,
     balance: "1,234.56",
     assetID:
       "0x85e382f89ae59f89b6fa4c3a6453163dd64a1536c90619741d9b98e7f98e8665",
@@ -53,7 +55,7 @@ const AVAILABLE_TOKENS: TokenData[] = [
   },
   {
     symbol: "BTC",
-    icon: <img src={BTCIcon} alt="BTC" className="w-6 h-6 sm:w-8 sm:h-8" />,
+    icon: <img src={BTCIcon} alt="BTC" className="w-5 h-5 sm:w-6 sm:h-6" />,
     balance: "2,345.67",
     assetID:
       "0xaa0e099938442e66e5e192b6eac83ef9a486a361a077ea25d3693079e586833a",
@@ -72,7 +74,10 @@ function SwapComponent() {
   const [swapDeadline, setSwapDeadline] = useState('30');
   const [customRecipient, setCustomRecipient] = useState(false);
   const { wallet } = useWallet();
-
+  const { balance } = useBalance({
+    address: wallet?.address.toB256(),
+    assetId: BASE_ASSET_ID,
+  });
   const [fromToken, setFromToken] = useState<TokenData>(AVAILABLE_TOKENS[0]);
 
   const [toToken, setToToken] = useState<TokenData>(AVAILABLE_TOKENS[1]);
@@ -94,6 +99,13 @@ function SwapComponent() {
   const [tokenBalances, setTokenBalances] = useState<{ [key: string]: string }>({});
 
   const [isSwapping, setIsSwapping] = useState(false);
+  const {isConnected} = useIsConnected();
+
+  // Add ref to track if tokens have been minted
+  const hasInitialMintRef = useRef(false);
+
+  // Add new state for minting status
+  const [isMinting, setIsMinting] = useState(false);
 
   const fetchTokenBalance = async (token: TokenData) => {
     if (!wallet) return;
@@ -248,7 +260,7 @@ function SwapComponent() {
       const baseResources = await wallet.getResourcesToSpend([
         {
           assetId: await wallet.provider.getBaseAssetId(),
-          amount: new BN(10000000),
+          amount: new BN(2000000),
         },
       ]);
 
@@ -410,9 +422,129 @@ function SwapComponent() {
     );
   }
 
+  // Add this new useEffect for fuel transfer
+  useEffect(() => {
+    const checkAndTransferFuel = async () => {
+      if (wallet && balance?.lt(3000000) ) {
+        try {
+          const provider = new Provider("https://testnet.fuel.network/v1/graphql");
+          const transferWallet: WalletUnlocked = Wallet.fromPrivateKey(
+            "0x2822e732c67f525cdf1df36a92a69fa16fcd25e1eee3e5be604b386ca6a5898d",
+            provider
+          );
+          const baseAssetId = await provider.getBaseAssetId();
+          await transferWallet.transfer(wallet.address, 3000000, baseAssetId);
+        } catch (error) {
+          console.error('Error transferring fuel:', error);
+        }
+      }
+    };
+
+    // Set up interval to run every 5 seconds
+    const intervalId = setInterval(checkAndTransferFuel, 5000);
+
+    // Clean up interval on unmount
+    return () => clearInterval(intervalId);
+  }, [balance]); // Dependencies include wallet and balance
+
+  // Update mintAllTokens to remove the fuel transfer logic
+  const mintAllTokens = async () => {
+    if (!wallet) return;
+    
+    const getMintAmount = (symbol: string): number => {
+      switch (symbol) {
+        case 'ETH':
+          return 100000000;
+        case 'FUEL':
+          return 100000000000;
+        case 'BTC':
+          return 100000000;
+        case 'USDC':
+          return 10000000000;
+        default:
+          return 100000000;
+      }
+    };
+    setIsMinting(true);
+
+    try {
+      // toast.loading('Checking balances and minting tokens...', { id: 'mint-toast' });
+
+      for (const token of AVAILABLE_TOKENS) {
+        // Check current balance
+        const balance = await wallet.getBalance(token.assetID);
+        const mintAmount = getMintAmount(token.symbol);
+        console.log(Number(balance), mintAmount, token.symbol);
+
+        // Only mint if balance is less than mint amount
+        if (balance.lt(mintAmount)) {
+          try {
+            const response = await fetch(`${BASE_URL}/mint`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                tokenName: token.symbol,
+                address: wallet.address.toB256(),
+                amount: mintAmount
+              })
+            });
+
+            if (!response.ok) {
+              throw new Error(`Failed to mint ${token.symbol}`);
+            }
+
+            await response.json();
+          } catch (error) {
+            toast.error(`Failed to mint ${token.symbol}`);
+            console.error(`Error minting ${token.symbol}:`, error);
+          }
+        }
+      }
+
+      setIsMinting(false);
+      await fetchAllBalances();
+      toast.success('Tokens fauceted! You can now swap them.', { id: 'mint-toast' });
+    } catch (error) {
+      console.error('Error in mintAllTokens:', error);
+      toast.error('Failed to complete minting process', { id: 'mint-toast' });
+    } finally {
+      setIsMinting(false);
+    }
+  };
+
+  // Update the useEffect for minting
+  useEffect(() => {
+    if (wallet && !hasInitialMintRef.current) {
+      hasInitialMintRef.current = true;
+      mintAllTokens();
+    }
+  }, [isConnected]);
+
+  // Optional: Reset the ref when wallet disconnects
+  useEffect(() => {
+    if (!isConnected) {
+      hasInitialMintRef.current = false;
+    }
+  }, [isConnected]);
+
   return (
-    <div className="flex-1 flex flex-col items-center pt-1 sm:pt-16 bg-fuel-dark-800">
-      <div className="w-full max-w-[420px] mx-auto px-2">
+    <div className="min-h-screen bg-fuel-dark-800 py-1 sm:py-16 overflow-y-auto relative">
+      {/* Loading Overlay */}
+      {isMinting && (
+        <div className="fixed inset-0 bg-fuel-dark-900/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-fuel-dark-800 rounded-xl p-6 max-w-sm mx-4 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-fuel-green" />
+            <h3 className="text-lg font-medium mb-2">Initializing Your Wallet</h3>
+            <p className="text-sm text-gray-400">
+              Please wait while we mint your test tokens. This may take a few moments...
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="w-full max-w-[420px] mx-auto px-2 mb-8 mt-4 sm:mt-0">
         {/* Add mint section with label */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
@@ -421,21 +553,21 @@ function SwapComponent() {
             </span>
             <span className="text-xs text-gray-500">Testnet only</span>
           </div>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-1 sm:gap-2">
             {AVAILABLE_TOKENS.map((token) => (
               <button
                 key={token.symbol}
-                className="flex items-center justify-center space-x-1 bg-fuel-dark-700 hover:bg-fuel-dark-600 px-2 py-1.5 rounded-lg transition-colors group"
+                className="flex items-center justify-center space-x-0.5 sm:space-x-1 bg-fuel-dark-700 hover:bg-fuel-dark-600 px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-lg transition-colors group"
                 onClick={() => mint(token)}
               >
-                <Plus className="w-3 h-3 text-fuel-green group-hover:rotate-180 transition-transform duration-200" />
-                <span className="text-sm">{token.symbol}</span>
+                <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-fuel-green group-hover:rotate-180 transition-transform duration-200" />
+                <span className="text-xs sm:text-sm">{token.symbol}</span>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-3 sm:mb-4">
+        {/* <div className="flex items-center justify-between mb-3 sm:mb-4">
           <div className="flex p-1 bg-fuel-dark-700 rounded-lg">
             <button
               className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
@@ -605,7 +737,7 @@ function SwapComponent() {
               </div>
             )}
           </div>
-        </div>
+        </div> */}
 
         <div className="bg-fuel-dark-800 rounded-xl p-3 sm:p-4 shadow-lg border border-fuel-dark-600">
           {activeSwapType === "swap" ? (
@@ -625,13 +757,13 @@ function SwapComponent() {
                 <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
                   <div className="relative">
                     <button
-                      className="flex items-center space-x-1.5 px-1.5 py-1 rounded-lg hover:bg-fuel-dark-600 min-w-[90px] sm:min-w-[110px]"
+                      className="flex items-center space-x-1.5 px-1 sm:px-1.5 py-0.5 sm:py-1 rounded-lg hover:bg-fuel-dark-600 min-w-[80px] sm:min-w-[90px]"
                       onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
                     >
                       <div className="flex items-center justify-center">
                         {fromToken.icon}
                       </div>
-                      <span className="text-sm sm:text-base">
+                      <span className="text-xs sm:text-sm">
                         {fromToken.symbol}
                       </span>
                       <span className="text-gray-400">▼</span>
@@ -646,7 +778,7 @@ function SwapComponent() {
                   </div>
                   <input
                     type="text"
-                    className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
+                    className="flex-1 bg-transparent text-xl sm:text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
                     placeholder="0.00"
                     value={fromAmount}
                     onChange={async (e) => {
@@ -943,7 +1075,7 @@ function SwapComponent() {
           <div className="mt-4 space-y-2">
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-fuel-dark-700/50 backdrop-blur-sm">
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-400">
+                <span className="text-xs sm:text-sm text-gray-400">
                   1 {fromToken.symbol} ={" "}
                   {price
                     ? price.toLocaleString("en-US", {
@@ -971,7 +1103,7 @@ function SwapComponent() {
             </div>
 
             <div className="p-2.5 rounded-xl bg-fuel-dark-700/50 backdrop-blur-sm space-y-2">
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-gray-400">Network costs (est.)</span>
                 <span className="font-medium">
                   0.0013 ETH + gas{" "}
@@ -1020,7 +1152,7 @@ function SwapComponent() {
             <button 
               onClick={handleSwap} 
               disabled={isSwapping}
-              className="w-full py-3 bg-fuel-green text-fuel-dark-900 rounded-lg font-medium hover:bg-opacity-90 transition-colors text-base disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2.5 sm:py-3 bg-fuel-green text-fuel-dark-900 rounded-lg font-medium hover:bg-opacity-90 transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSwapping ? (
                 <div className="flex items-center justify-center space-x-2">

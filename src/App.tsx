@@ -1306,7 +1306,7 @@ function App() {
     <div className="h-screen flex flex-col bg-fuel-dark-900 text-gray-100">
       {/* Header - Always visible */}
       <header className="border-b border-fuel-dark-600 bg-fuel-dark-800 py-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 space-y-2 sm:space-y-0">
+        <div className="flex flex-row sm:items-center justify-between px-4 space-y-2 sm:space-y-0">
           <div className="flex items-center justify-between sm:justify-start">
             <div className="flex items-center space-x-1 mr-5">
               <img
@@ -1384,12 +1384,12 @@ function App() {
             >
               Portfolio
             </button> */}
-            <button
+            {/* <button
               className="px-3 sm:px-4 py-1.5 rounded bg-fuel-dark-700 text-gray-100 text-xs sm:text-sm hover:bg-fuel-dark-600 outline-none"
               onClick={() => setIsDepositModalOpen(true)}
             >
               Deposit
-            </button>
+            </button> */}
             <WalletConnect />
             {/* Add Settings Button */}
             {/* <div className="relative settings-dropdown">
@@ -3071,7 +3071,7 @@ function App() {
         />
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 h-6 bg-fuel-dark-800 border-t border-fuel-dark-600 px-4 flex items-center justify-between text-xs">
+      {/* <div className="fixed bottom-0 left-0 right-0 h-6 bg-fuel-dark-800 border-t border-fuel-dark-600 px-4 flex items-center justify-between text-xs">
         <div className="flex items-center space-x-2">
           <div className="flex items-center space-x-1.5">
             <div
@@ -3093,7 +3093,6 @@ function App() {
           >
             Docs
           </a>
-          {/* <a target="_blank" rel="noopener noreferrer" href="https://docs.fuel.trade" className="hover:text-gray-300">Support</a> */}
           <a
             target="_blank"
             rel="noopener noreferrer"
@@ -3111,7 +3110,7 @@ function App() {
             Privacy Policy
           </a>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 }
