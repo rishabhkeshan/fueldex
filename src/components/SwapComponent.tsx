@@ -520,7 +520,7 @@ function SwapComponent() {
       hasInitialMintRef.current = true;
       mintAllTokens();
     }
-  }, [isConnected]);
+  }, [isConnected, wallet]);
 
   // Optional: Reset the ref when wallet disconnects
   useEffect(() => {
