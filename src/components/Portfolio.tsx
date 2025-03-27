@@ -2,30 +2,30 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Trade, UserTrade, ActiveOrder, HistoricalOrder } from '../types/trading';
 import { Line } from 'react-chartjs-2';
 import { ExternalLink, ChevronDown } from 'lucide-react';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-} from 'chart.js';
+// import {
+//   Chart as ChartJS,
+//   CategoryScale,
+//   LinearScale,
+//   PointElement,
+//   LineElement,
+//   Title,
+//   Tooltip,
+//   Legend,
+//   Filler
+// } from 'chart.js';
 import DepositModal from './DepositModal';
 import WithdrawModal from './WithdrawModal';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+// ChartJS.register(
+//   CategoryScale,
+//   LinearScale,
+//   PointElement,
+//   LineElement,
+//   Title,
+//   Tooltip,
+//   Legend,
+//   Filler
+// );
 
 interface AssetBalances {
   available: {
@@ -414,28 +414,28 @@ const Portfolio: React.FC<PortfolioProps> = ({
     }
   };
 
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false
-      }
-    },
-    scales: {
-      x: {
-        display: false
-      },
-      y: {
-        grid: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        },
-        border: {
-          display: false
-        }
-      }
-    }
-  };
+  // const chartOptions = {
+  //   responsive: true,
+  //   maintainAspectRatio: false,
+  //   plugins: {
+  //     legend: {
+  //       display: false
+  //     }
+  //   },
+  //   scales: {
+  //     x: {
+  //       display: false
+  //     },
+  //     y: {
+  //       grid: {
+  //         color: 'rgba(255, 255, 255, 0.1)'
+  //       },
+  //       border: {
+  //         display: false
+  //       }
+  //     }
+  //   }
+  // };
 
   const { takerFee, makerFee } = calculateFees();
 

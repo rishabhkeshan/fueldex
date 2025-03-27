@@ -34,6 +34,30 @@ createRoot(document.getElementById("root")!).render(
               toastOptions={{
                 position:
                   window.innerWidth <= 768 ? "top-center" : "bottom-center",
+                style: {
+                  background: '#141414', // fuel-dark-800
+                  color: '#fff',
+                  border: '1px solid #27272A', // fuel-dark-600
+                },
+                success: {
+                  iconTheme: {
+                    primary: '#00F58C', // fuel-green
+                    secondary: '#141414', // fuel-dark-800
+                  },
+                },
+                error: {
+                  iconTheme: {
+                    primary: '#EF4444', // red-500
+                    secondary: '#141414', // fuel-dark-800
+                  },
+                },
+                loading: {
+                  iconTheme: {
+                    primary: '#00F58C', // fuel-green
+                    secondary: '#141414', // fuel-dark-800
+                  },
+                },
+                duration: 4000,
               }}
             />
           </RainbowKitProvider>

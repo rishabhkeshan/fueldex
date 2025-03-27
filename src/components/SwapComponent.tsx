@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
-import { ArrowDownUp, Info, Settings, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowDownUp, Info, Settings, Loader2, Plus } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import WalletConnect from './WalletConnect';
-import USDTIcon from '../assets/usdt.svg';
-import USDCIcon from '../assets/usdc.svg';
+import { Address, bn, BN, createAssetId, ScriptTransactionRequest, ZeroBytes32 } from 'fuels';
 import ETHIcon from '../assets/eth.svg';
+import FUELIcon from '../assets/fuelsymbol.svg';
+import BTCIcon from '../assets/solvBTC.webp';
+import USDCIcon from '../assets/usdc.svg';
+import { useWallet, useBalance } from '@fuels/react';
+import axios from 'axios';
 
 interface TokenData {
   symbol: string;
@@ -11,32 +16,50 @@ interface TokenData {
   balance: string;
   usdValue: string;
   iconBg: string;
+  assetID: string;
 }
 
 type SwapType = 'swap' | 'limit';
+const BASE_URL = "https://fuelstation-mainnet.xyz";
+// const BASE_URL = "http://localhost:3000";
 
 const AVAILABLE_TOKENS: TokenData[] = [
   {
-    symbol: 'ETH',
+    symbol: "ETH",
     icon: <img src={ETHIcon} alt="ETH" className="w-6 h-6 sm:w-8 sm:h-8" />,
-    balance: '0.476402',
-    usdValue: '1,482.29',
-    iconBg: ''
+    balance: "0.476402",
+    assetID:
+      "0x143cd7c86d87664e926965c623cb9979aac62e751426feb7102fac0338e17f3b",
+    usdValue: "1,482.29",
+    iconBg: "",
   },
   {
-    symbol: 'USDC',
+    symbol: "USDC",
     icon: <img src={USDCIcon} alt="USDC" className="w-6 h-6 sm:w-8 sm:h-8" />,
-    balance: '1,234.56',
-    usdValue: '1,234.56',
-    iconBg: ''
+    balance: "1,234.56",
+    assetID:
+      "0x6359423c4a652e99e14677546fef12fc0946ca577c7eebc16202dc47467b09be",
+    usdValue: "1,234.56",
+    iconBg: "",
   },
   {
-    symbol: 'USDT',
-    icon: <img src={USDTIcon} alt="USDT" className="w-6 h-6 sm:w-8 sm:h-8" />,
-    balance: '2,345.67',
-    usdValue: '2,345.67',
-    iconBg: ''
-  }
+    symbol: "FUEL",
+    icon: <img src={FUELIcon} alt="FUEL" className="w-6 h-6 sm:w-8 sm:h-8" />,
+    balance: "1,234.56",
+    assetID:
+      "0x85e382f89ae59f89b6fa4c3a6453163dd64a1536c90619741d9b98e7f98e8665",
+    usdValue: "1,234.56",
+    iconBg: "",
+  },
+  {
+    symbol: "BTC",
+    icon: <img src={BTCIcon} alt="BTC" className="w-6 h-6 sm:w-8 sm:h-8" />,
+    balance: "2,345.67",
+    assetID:
+      "0xaa0e099938442e66e5e192b6eac83ef9a486a361a077ea25d3693079e586833a",
+    usdValue: "2,345.67",
+    iconBg: "",
+  },
 ];
 
 function SwapComponent() {
@@ -48,10 +71,11 @@ function SwapComponent() {
   const [slippageTolerance, setSlippageTolerance] = useState<'auto' | string>('auto');
   const [swapDeadline, setSwapDeadline] = useState('30');
   const [customRecipient, setCustomRecipient] = useState(false);
+  const { wallet } = useWallet();
 
   const [fromToken, setFromToken] = useState<TokenData>(AVAILABLE_TOKENS[0]);
 
-  const [toToken, setToToken] = useState<TokenData>(AVAILABLE_TOKENS[2]);
+  const [toToken, setToToken] = useState<TokenData>(AVAILABLE_TOKENS[1]);
 
   const [slippageDisplay, setSlippageDisplay] = useState('2.00');
   const [deadlineDisplay, setDeadlineDisplay] = useState('30');
@@ -64,18 +88,221 @@ function SwapComponent() {
   const [enablePartialExecutions, setEnablePartialExecutions] = useState(false);
 
   const [isPriceLoading, setIsPriceLoading] = useState(false);
+  const [price, setPrice] = useState<number | null>(null);
+  const [priceError, setError] = useState<string | null>(null);
 
-  const handlePriceRefresh = () => {
+  const [tokenBalances, setTokenBalances] = useState<{ [key: string]: string }>({});
+
+  const [isSwapping, setIsSwapping] = useState(false);
+
+  const fetchTokenBalance = async (token: TokenData) => {
+    if (!wallet) return;
+    try {
+      const balance = await wallet.getBalance(token.assetID);
+      const formattedBalance = balance.format({units: 9}).toString();
+      setTokenBalances(prev => ({
+        ...prev,
+        [token.symbol]: formattedBalance
+      }));
+    } catch (error) {
+      console.error(`Error fetching balance for ${token.symbol}:`, error);
+    }
+  };
+
+  const fetchAllBalances = async () => {
+    if (!wallet) return;
+    for (const token of AVAILABLE_TOKENS) {
+      await fetchTokenBalance(token);
+    }
+  };
+
+  useEffect(() => {
+    if (wallet) {
+      fetchAllBalances();
+    }
+  }, [wallet]);
+
+  useEffect(() => {
+    if (wallet) {
+      fetchTokenBalance(fromToken);
+    }
+  }, [fromToken.symbol, wallet]);
+
+  useEffect(() => {
+    setFromAmount('');
+    setToAmount('');
+  }, [fromToken.symbol]);
+
+  const fetchPrice = async (symbol: string) => {
     setIsPriceLoading(true);
-    setTimeout(() => setIsPriceLoading(false), 1000);
+    setError(null);
+    try {
+      const response = await fetch(`${BASE_URL}/price/${symbol}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch price');
+      }
+      const data = await response.json();
+      console.log(data);
+      setPrice(data.price);
+    } catch (err) {
+      setError('Failed to fetch price');
+      console.error('Error fetching price:', err);
+    } finally {
+      setIsPriceLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (fromToken && toToken) {
+      fetchPrice(fromToken.symbol);
+    }
+  }, [fromToken.symbol, toToken.symbol]);
+
+  const handlePriceRefresh = async() => {
+    await fetchPrice(fromToken.symbol);
   };
 
   const handleSwapTokens = () => {
     const tempFromToken = { ...fromToken };
     setFromToken({ ...toToken });
     setToToken(tempFromToken);
-    setFromAmount(toAmount);
-    setToAmount(fromAmount);
+    setFromAmount('');
+    setToAmount('');
+  };
+
+  const mint = async (token: TokenData) => {
+    if (!wallet) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    const getMintAmount = (symbol: string): number => {
+      switch (symbol) {
+        case 'ETH':
+          return 100000000;
+        case 'FUEL':
+          return 100000000000;
+        case 'BTC':
+          return 100000000;
+        case 'USDC':
+          return 10000000000;
+        default:
+          return 100000000;
+      }
+    };
+
+    toast.promise(
+      fetch(`${BASE_URL}/mint`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tokenName: token.symbol,
+          address: wallet.address.toB256(),
+          amount: getMintAmount(token.symbol)
+        })
+      }).then(async (response) => {
+        if (!response.ok) {
+          throw new Error('Failed to mint');
+        }
+        const result = await response.json();
+        // Fetch updated balances after successful mint
+        await fetchAllBalances();
+        return result;
+      }),
+      {
+        loading: `Minting ${token.symbol}...`,
+        success: `Successfully minted ${token.symbol}!`,
+        error: `Failed to mint ${token.symbol}`,
+      }
+    );
+  };
+
+  const handleSwap = async () => {
+    console.log("Swapping tokens...");
+    if (!wallet || !fromAmount) {
+      toast.error('Please connect wallet and enter amount');
+      return;
+    }
+
+    setIsSwapping(true);
+    try {
+      // Create script transaction request
+      const scriptTransactionRequest = new ScriptTransactionRequest();
+
+      // Get sell token amount in proper format
+      const sellTokenAmount = bn.parseUnits(fromAmount, 9);
+
+      // Get resources for the sell token
+      const resources = await wallet.getResourcesToSpend([
+        {
+          assetId: fromToken.assetID,
+          amount: sellTokenAmount,
+        },
+      ]);
+
+      scriptTransactionRequest.addResources(resources);
+
+      // Get and add base asset (gas) resources
+      const baseResources = await wallet.getResourcesToSpend([
+        {
+          assetId: await wallet.provider.getBaseAssetId(),
+          amount: new BN(10000000),
+        },
+      ]);
+
+      scriptTransactionRequest.addResources(baseResources);
+
+      // Add outputs
+      const solverAddress = Address.fromB256("0xf8cf8acbe8b4d970c3e1c9ffed11e8b55abfc5287ad7f5e4d0240a4f0651d658");
+      scriptTransactionRequest.addCoinOutput(
+        // You'll need to get the solver wallet address from your backend
+        solverAddress, // Replace with actual solver wallet address
+        sellTokenAmount,
+        fromToken.assetID
+      );
+      scriptTransactionRequest.addChangeOutput(
+        wallet.address,
+        fromToken.assetID
+      );
+
+      console.log("Sending fill order request to backend...");
+      // Send fill order request to backend
+      const { data } = await axios.post(`${BASE_URL}/fill-order`, {
+        scriptRequest: scriptTransactionRequest.toJSON(),
+        sellTokenName: fromToken.symbol.toLowerCase(),
+        sellTokenAmount: sellTokenAmount.toString(),
+        recepientAddress: wallet.address.toB256(),
+      });
+
+      // Create new request from response
+      const responseRequest = new ScriptTransactionRequest();
+      Object.assign(responseRequest, data.request);
+
+      // Send transaction
+      await toast.promise(
+        (async () => {
+          const tx = await wallet.sendTransaction(responseRequest);
+          const result = await tx.waitForResult();
+          console.log('Transaction ID:', result.id);
+          // Fetch updated balances after successful swap
+          await fetchAllBalances();
+          return result;
+        })(),
+        {
+          loading: 'Swapping tokens...',
+          success: 'Swap successful!',
+          error: 'Swap failed',
+        }
+      );
+
+    } catch (error) {
+      console.error('Swap error:', error);
+      toast.error('Failed to execute swap');
+    } finally {
+      setIsSwapping(false);
+    }
   };
 
   function TokenDropdown({ 
@@ -116,7 +343,61 @@ function SwapComponent() {
                 </div>
                 <div className="flex flex-col items-start flex-1">
                   <span className="text-sm font-medium">{token.symbol}</span>
-                  <span className="text-xs text-gray-400">Balance: {token.balance}</span>
+                  <span className="text-xs text-gray-400">
+                    Balance: {tokenBalances[token.symbol] || '0.000000'}
+                  </span>
+                </div>
+                {selectedToken.symbol === token.symbol && (
+                  <div className="w-2 h-2 rounded-full bg-fuel-green"></div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  function TempTokenDropdown({ 
+    isOpen, 
+    onClose, 
+    onSelect, 
+    selectedToken,
+    excludeToken 
+  }: { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    onSelect: (token: TokenData) => void;
+    selectedToken: TokenData;
+    excludeToken?: string; 
+  }) {
+    if (!isOpen) return null;
+
+    const availableTokens = AVAILABLE_TOKENS.filter(token => token.symbol === "USDC");
+
+    return (
+      <div className="absolute top-full left-0 mt-2 w-[240px] bg-fuel-dark-800 rounded-xl shadow-lg border border-fuel-dark-600 z-50">
+        <div className="p-3">
+          <div className="text-sm text-gray-400 mb-2">Select Token</div>
+          <div className="space-y-1">
+            {availableTokens.map((token) => (
+              <button
+                key={token.symbol}
+                className={`w-full flex items-center space-x-3 p-2.5 rounded-lg hover:bg-fuel-dark-700 transition-colors ${
+                  selectedToken.symbol === token.symbol ? 'bg-fuel-dark-700' : ''
+                }`}
+                onClick={() => {
+                  onSelect(token);
+                  onClose();
+                }}
+              >
+                <div className="flex items-center justify-center">
+                  {token.icon}
+                </div>
+                <div className="flex flex-col items-start flex-1">
+                  <span className="text-sm font-medium">{token.symbol}</span>
+                  <span className="text-xs text-gray-400">
+                    Balance: {tokenBalances[token.symbol] || '0.000000'}
+                  </span>
                 </div>
                 {selectedToken.symbol === token.symbol && (
                   <div className="w-2 h-2 rounded-full bg-fuel-green"></div>
@@ -132,6 +413,28 @@ function SwapComponent() {
   return (
     <div className="flex-1 flex flex-col items-center pt-1 sm:pt-16 bg-fuel-dark-800">
       <div className="w-full max-w-[420px] mx-auto px-2">
+        {/* Add mint section with label */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-400">
+              Mint assets for testing
+            </span>
+            <span className="text-xs text-gray-500">Testnet only</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {AVAILABLE_TOKENS.map((token) => (
+              <button
+                key={token.symbol}
+                className="flex items-center justify-center space-x-1 bg-fuel-dark-700 hover:bg-fuel-dark-600 px-2 py-1.5 rounded-lg transition-colors group"
+                onClick={() => mint(token)}
+              >
+                <Plus className="w-3 h-3 text-fuel-green group-hover:rotate-180 transition-transform duration-200" />
+                <span className="text-sm">{token.symbol}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex items-center justify-between mb-3 sm:mb-4">
           <div className="flex p-1 bg-fuel-dark-700 rounded-lg">
             <button
@@ -312,7 +615,11 @@ function SwapComponent() {
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-400 font-medium">From</span>
                   <span className="text-gray-400">
-                    Balance: <span className="text-white">{fromToken.balance}</span> {fromToken.symbol}
+                    Balance:{" "}
+                    <span className="text-white">
+                      {tokenBalances[fromToken.symbol] || "0.000000"}
+                    </span>{" "}
+                    {fromToken.symbol}
                   </span>
                 </div>
                 <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
@@ -324,7 +631,9 @@ function SwapComponent() {
                       <div className="flex items-center justify-center">
                         {fromToken.icon}
                       </div>
-                      <span className="text-sm sm:text-base">{fromToken.symbol}</span>
+                      <span className="text-sm sm:text-base">
+                        {fromToken.symbol}
+                      </span>
                       <span className="text-gray-400">▼</span>
                     </button>
                     <TokenDropdown
@@ -340,19 +649,36 @@ function SwapComponent() {
                     className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
                     placeholder="0.00"
                     value={fromAmount}
-                    onChange={(e) => setFromAmount(e.target.value)}
+                    onChange={async (e) => {
+                      const value = e.target.value;
+                      setFromAmount(value);
+
+                      if (value) {
+                        // Fetch latest price when amount changes
+                        await fetchPrice(fromToken.symbol);
+                        // Calculate to amount based on new price
+                        if (price) {
+                          const calculatedAmount = (
+                            parseFloat(value) * price
+                          ).toFixed(6);
+                          setToAmount(calculatedAmount);
+                        }
+                      } else {
+                        setToAmount("");
+                      }
+                    }}
                   />
                 </div>
                 <div className="text-right text-xs text-gray-400">
-                  ≈ $<span className="text-white">{fromToken.usdValue}</span>
+                  {/* ≈ $<span className="text-white">{fromToken.usdValue}</span> */}
                 </div>
               </div>
 
               {/* Swap Direction Button */}
-              <div className="flex justify-center -my-2 relative z-10">
+              <div className="flex justify-center relative z-10">
                 <button
                   className="p-2 rounded-xl bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-all duration-200 border-4 border-fuel-dark-800 shadow-lg group"
-                  onClick={handleSwapTokens}
+                  // onClick={handleSwapTokens}
                 >
                   <ArrowDownUp className="w-5 h-5 text-fuel-green group-hover:rotate-180 transition-transform duration-200" />
                 </button>
@@ -361,7 +687,11 @@ function SwapComponent() {
                 <div className="flex justify-between text-xs">
                   <span className="text-gray-400 font-medium">To</span>
                   <span className="text-gray-400">
-                    Balance: <span className="text-white">{toToken.balance}</span> {toToken.symbol}
+                    Balance:{" "}
+                    <span className="text-white">
+                      {tokenBalances[toToken.symbol] || "0.000000"}
+                    </span>{" "}
+                    {toToken.symbol}
                   </span>
                 </div>
                 <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
@@ -373,10 +703,12 @@ function SwapComponent() {
                       <div className="flex items-center justify-center">
                         {toToken.icon}
                       </div>
-                      <span className="text-sm sm:text-base">{toToken.symbol}</span>
+                      <span className="text-sm sm:text-base">
+                        {toToken.symbol}
+                      </span>
                       <span className="text-gray-400">▼</span>
                     </button>
-                    <TokenDropdown
+                    <TempTokenDropdown
                       isOpen={isToTokenOpen}
                       onClose={() => setIsToTokenOpen(false)}
                       onSelect={setToToken}
@@ -389,11 +721,28 @@ function SwapComponent() {
                     className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
                     placeholder="0.00"
                     value={toAmount}
-                    onChange={(e) => setToAmount(e.target.value)}
+                    onChange={async (e) => {
+                      const value = e.target.value;
+                      setToAmount(value);
+
+                      if (value) {
+                        // Fetch latest price when amount changes
+                        await fetchPrice(fromToken.symbol);
+                        // Calculate from amount based on new price
+                        if (price) {
+                          const calculatedAmount = (
+                            parseFloat(value) / price
+                          ).toFixed(6);
+                          setFromAmount(calculatedAmount);
+                        }
+                      } else {
+                        setFromAmount("");
+                      }
+                    }}
                   />
                 </div>
                 <div className="text-right text-xs text-gray-400">
-                  ≈ $<span className="text-white">{toToken.usdValue}</span>
+                  {/* ≈ $<span className="text-white">{toToken.usdValue}</span> */}
                 </div>
               </div>
             </>
@@ -404,7 +753,11 @@ function SwapComponent() {
                   <span className="text-gray-400 font-medium">Sell amount</span>
                   <div className="flex items-center space-x-2">
                     <span className="text-gray-400">
-                      Balance: <span className="text-white">{fromToken.balance}</span> {fromToken.symbol}
+                      Balance:{" "}
+                      <span className="text-white">
+                        {tokenBalances[fromToken.symbol] || "0.000000"}
+                      </span>{" "}
+                      {fromToken.symbol}
                     </span>
                     <button className="text-xs text-fuel-green hover:text-fuel-green-light">
                       MAX
@@ -420,7 +773,9 @@ function SwapComponent() {
                       <div className="flex items-center justify-center">
                         {fromToken.icon}
                       </div>
-                      <span className="text-sm sm:text-base">{fromToken.symbol}</span>
+                      <span className="text-sm sm:text-base">
+                        {fromToken.symbol}
+                      </span>
                       <span className="text-gray-400">▼</span>
                     </button>
                     <TokenDropdown
@@ -436,7 +791,24 @@ function SwapComponent() {
                     className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
                     placeholder="0.00"
                     value={fromAmount}
-                    onChange={(e) => setFromAmount(e.target.value)}
+                    onChange={async (e) => {
+                      const value = e.target.value;
+                      setFromAmount(value);
+
+                      if (value) {
+                        // Fetch latest price when amount changes
+                        await fetchPrice(fromToken.symbol);
+                        // Calculate to amount based on new price
+                        if (price) {
+                          const calculatedAmount = (
+                            parseFloat(value) * price
+                          ).toFixed(6);
+                          setToAmount(calculatedAmount);
+                        }
+                      } else {
+                        setToAmount("");
+                      }
+                    }}
                   />
                 </div>
                 <div className="text-right text-xs text-gray-400">
@@ -457,7 +829,9 @@ function SwapComponent() {
                       value={limitPrice}
                       onChange={(e) => setLimitPrice(e.target.value)}
                     />
-                    <span className="text-sm text-gray-400 px-2">{toToken.symbol}</span>
+                    <span className="text-sm text-gray-400 px-2">
+                      {toToken.symbol}
+                    </span>
                   </div>
                 </div>
                 <div>
@@ -501,9 +875,15 @@ function SwapComponent() {
 
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-400 font-medium">Receive at least</span>
+                  <span className="text-gray-400 font-medium">
+                    Receive at least
+                  </span>
                   <span className="text-gray-400">
-                    Balance: <span className="text-white">{toToken.balance}</span> {toToken.symbol}
+                    Balance:{" "}
+                    <span className="text-white">
+                      {tokenBalances[toToken.symbol] || "0.000000"}
+                    </span>{" "}
+                    {toToken.symbol}
                   </span>
                 </div>
                 <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
@@ -515,7 +895,9 @@ function SwapComponent() {
                       <div className="flex items-center justify-center">
                         {toToken.icon}
                       </div>
-                      <span className="text-sm sm:text-base">{toToken.symbol}</span>
+                      <span className="text-sm sm:text-base">
+                        {toToken.symbol}
+                      </span>
                       <span className="text-gray-400">▼</span>
                     </button>
                     <TokenDropdown
@@ -531,7 +913,24 @@ function SwapComponent() {
                     className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
                     placeholder="0.00"
                     value={toAmount}
-                    onChange={(e) => setToAmount(e.target.value)}
+                    onChange={async (e) => {
+                      const value = e.target.value;
+                      setToAmount(value);
+
+                      if (value) {
+                        // Fetch latest price when amount changes
+                        await fetchPrice(fromToken.symbol);
+                        // Calculate from amount based on new price
+                        if (price) {
+                          const calculatedAmount = (
+                            parseFloat(value) / price
+                          ).toFixed(6);
+                          setFromAmount(calculatedAmount);
+                        }
+                      } else {
+                        setFromAmount("");
+                      }
+                    }}
                   />
                 </div>
                 <div className="text-right text-xs text-gray-400">
@@ -545,7 +944,16 @@ function SwapComponent() {
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-fuel-dark-700/50 backdrop-blur-sm">
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-400">
-                  1 {fromToken.symbol} = {(78079.0602).toLocaleString()} {toToken.symbol}
+                  1 {fromToken.symbol} ={" "}
+                  {price
+                    ? price.toLocaleString("en-US", {
+                        minimumFractionDigits: 3,
+                      })
+                    : "..."}{" "}
+                  {toToken.symbol}
+                  {priceError && (
+                    <span className="text-red-500 ml-2">{priceError}</span>
+                  )}
                 </span>
                 <Info className="w-4 h-4 text-gray-500" />
               </div>
@@ -565,19 +973,28 @@ function SwapComponent() {
             <div className="p-2.5 rounded-xl bg-fuel-dark-700/50 backdrop-blur-sm space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">Network costs (est.)</span>
-                <span className="font-medium">5.486 FUEL + gas <span className="text-gray-400">(≈ $0.38)</span></span>
+                <span className="font-medium">
+                  0.0013 ETH + gas{" "}
+                  <span className="text-gray-400">(≈ $0.0038)</span>
+                </span>
               </div>
               {activeSwapType === "swap" ? (
                 <>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Slippage tolerance</span>
                     <span className="font-medium">
-                      {slippageTolerance === "auto" ? "Auto" : `${slippageDisplay}%`}
+                      {slippageTolerance === "auto"
+                        ? "Auto"
+                        : `${slippageDisplay}%`}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Transaction expiration</span>
-                    <span className="font-medium">{deadlineDisplay} minutes</span>
+                    <span className="text-gray-400">
+                      Transaction expiration
+                    </span>
+                    <span className="font-medium">
+                      {deadlineDisplay} minutes
+                    </span>
                   </div>
                 </>
               ) : (
@@ -588,7 +1005,9 @@ function SwapComponent() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">Partial fills</span>
-                    <span className="font-medium">{enablePartialExecutions ? 'Enabled' : 'Disabled'}</span>
+                    <span className="font-medium">
+                      {enablePartialExecutions ? "Enabled" : "Disabled"}
+                    </span>
                   </div>
                 </>
               )}
@@ -598,12 +1017,20 @@ function SwapComponent() {
 
         <div className="mt-4">
           {activeSwapType === "swap" ? (
-            <WalletConnect
-              variant="trade"
-              tradeType="buy"
-              tokenSymbol={toToken.symbol}
-              className="w-full py-3.5 text-base font-medium rounded-xl transition-all duration-200 hover:opacity-90 active:scale-[0.98]"
-            />
+            <button 
+              onClick={handleSwap} 
+              disabled={isSwapping}
+              className="w-full py-3 bg-fuel-green text-fuel-dark-900 rounded-lg font-medium hover:bg-opacity-90 transition-colors text-base disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSwapping ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Swapping...</span>
+                </div>
+              ) : (
+                'Place Order'
+              )}
+            </button>
           ) : (
             <button className="w-full py-3.5 bg-fuel-green text-fuel-dark-900 rounded-xl font-medium hover:bg-opacity-90 transition-colors text-base">
               Place Order

@@ -437,7 +437,7 @@ function App() {
   const [activeView, setActiveView] = useState<'orderbook' | 'trades' | 'chart'>('orderbook');
   const [isOrderTypeOpen, setIsOrderTypeOpen] = useState(false);
   const [isTokenSelectOpen, setIsTokenSelectOpen] = useState(false);
-  const [activeScreen, setActiveScreen] = useState<'terminal' | 'swap' | 'p2p' | 'portfolio'>('terminal');
+  const [activeScreen, setActiveScreen] = useState<'terminal' | 'swap' | 'p2p' | 'portfolio'>('swap');
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
   const [mobileView, setMobileView] = useState<'chart' | 'orderbook' | 'trades'>('chart');
   const [mobileBottomView, setMobileBottomView] = useState<'orders' | 'history'>('orders');
@@ -1316,7 +1316,7 @@ function App() {
               />
               <span className="text-base sm:text-lg font-bold">O2</span>
             </div>
-            <div className="flex items-center space-x-2 sm:space-x-4">
+            {/* <div className="flex items-center space-x-2 sm:space-x-4">
               <button
                 className={`px-2 sm:px-3 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
                   ${
@@ -1350,7 +1350,7 @@ function App() {
               >
                 P2P
               </button>
-            </div>
+            </div> */}
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
             {activeScreen === "terminal" && (
@@ -1373,7 +1373,7 @@ function App() {
                 )}
               </div>
             )}
-            <button
+            {/* <button
               className={`px-2 sm:px-3 py-1.5 rounded text-xs sm:text-sm transition-colors outline-none
                   ${
                     activeScreen === "portfolio"
@@ -1383,7 +1383,7 @@ function App() {
               onClick={() => setActiveScreen("portfolio")}
             >
               Portfolio
-            </button>
+            </button> */}
             <button
               className="px-3 sm:px-4 py-1.5 rounded bg-fuel-dark-700 text-gray-100 text-xs sm:text-sm hover:bg-fuel-dark-600 outline-none"
               onClick={() => setIsDepositModalOpen(true)}
@@ -1392,7 +1392,7 @@ function App() {
             </button>
             <WalletConnect />
             {/* Add Settings Button */}
-            <div className="relative settings-dropdown">
+            {/* <div className="relative settings-dropdown">
               <button
                 className="p-2 rounded bg-fuel-dark-700 text-gray-100 hover:bg-fuel-dark-600 outline-none"
                 onClick={() => setIsSettingsOpen(!isSettingsOpen)}
@@ -1452,7 +1452,7 @@ function App() {
                   </div>
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
         </div>
       </header>
