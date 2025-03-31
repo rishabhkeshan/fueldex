@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowDownUp, Info, Settings, Loader2, Plus } from 'lucide-react';
+import { ArrowDownUp, Info, Settings, Loader2, Plus, ExternalLink } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import WalletConnect from './WalletConnect';
 import { Address, bn, BN, ScriptTransactionRequest, WalletUnlocked, Wallet, Provider } from 'fuels';
@@ -269,8 +269,7 @@ function SwapComponent() {
       // Add outputs
       const solverAddress = Address.fromB256("0xf8cf8acbe8b4d970c3e1c9ffed11e8b55abfc5287ad7f5e4d0240a4f0651d658");
       scriptTransactionRequest.addCoinOutput(
-        // You'll need to get the solver wallet address from your backend
-        solverAddress, // Replace with actual solver wallet address
+        solverAddress,
         sellTokenAmount,
         fromToken.assetID
       );
@@ -292,22 +291,33 @@ function SwapComponent() {
       const responseRequest = new ScriptTransactionRequest();
       Object.assign(responseRequest, data.request);
 
-      // Send transaction
-      await toast.promise(
-        (async () => {
-          const tx = await wallet.sendTransaction(responseRequest);
-          const result = await tx.waitForResult();
-          console.log('Transaction ID:', result.id);
-          // Fetch updated balances after successful swap
-          await fetchAllBalances();
-          return result;
-        })(),
+      // First, handle just the transaction sending with toast.promise
+      const tx = await toast.promise(
+        wallet.sendTransaction(responseRequest),
         {
           loading: 'Swapping tokens...',
-          success: 'Swap successful!',
-          error: 'Swap failed',
+          success: (tx) => (
+            <div className="flex flex-col space-y-1">
+              <div>Swap successful! 🎉</div>
+              <a 
+                href={`https://app-testnet.fuel.network/tx/${tx.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center space-x-1 text-xs text-fuel-green hover:text-fuel-green-light transition-colors"
+              >
+                <span>{tx.id.substring(0, 8)}...{tx.id.substring(tx.id.length - 8)}</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          ),
+          error: 'Failed to send transaction'
         }
       );
+
+      // Handle confirmation and balance updates in background
+      tx.waitForResult().then(async () => {
+        await fetchAllBalances();
+      });
 
     } catch (error) {
       console.error('Swap error:', error);
@@ -425,7 +435,10 @@ function SwapComponent() {
   // Add this new useEffect for fuel transfer
   useEffect(() => {
     const checkAndTransferFuel = async () => {
-      if (wallet && balance?.lt(3000000) ) {
+      if (!wallet) return;
+      const ETHBalance = await wallet.getBalance(BASE_ASSET_ID);
+
+      if (ETHBalance.lt(3000000) ) {
         try {
           const provider = new Provider("https://testnet.fuel.network/v1/graphql");
           const transferWallet: WalletUnlocked = Wallet.fromPrivateKey(
@@ -445,7 +458,7 @@ function SwapComponent() {
 
     // Clean up interval on unmount
     return () => clearInterval(intervalId);
-  }, [balance]); // Dependencies include wallet and balance
+  }, []); // Dependencies include wallet and balance
 
   // Update mintAllTokens to remove the fuel transfer logic
   const mintAllTokens = async () => {
