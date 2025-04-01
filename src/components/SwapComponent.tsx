@@ -270,7 +270,7 @@ function SwapComponent() {
       ]);
       console.log("Resources:", resources);
       scriptTransactionRequest.addResources(resources);
-
+      console.log("debug 1");
       // Get and add base asset (gas) resources
       const baseResources = await wallet.getResourcesToSpend([
         {
@@ -278,9 +278,9 @@ function SwapComponent() {
           amount: new BN(2000000),
         },
       ]);
-
+      console.log("debug 2");
       scriptTransactionRequest.addResources(baseResources);
-
+      console.log("debug 3");
       // Add outputs
       const solverAddress = Address.fromB256("0xf8cf8acbe8b4d970c3e1c9ffed11e8b55abfc5287ad7f5e4d0240a4f0651d658");
       scriptTransactionRequest.addCoinOutput(
@@ -292,7 +292,7 @@ function SwapComponent() {
         wallet.address,
         fromToken.assetID
       );
-
+      console.log("debug 4");
       console.log("Sending fill order request to backend...");
       // Send fill order request to backend
       const { data } = await axios.post(`${BASE_URL}/fill-order`, {
