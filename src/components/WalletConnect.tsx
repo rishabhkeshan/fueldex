@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Wallet, LogOut } from "lucide-react";
 import { useConnectUI, useDisconnect, useWallet } from "@fuels/react";
+import { toast } from "react-hot-toast";
 
 interface WalletConnectProps {
   variant?: 'header' | 'trade';
@@ -19,6 +20,19 @@ function WalletConnect({ variant = 'header', tradeType = 'buy', tokenSymbol = 'F
       setAddress(wallet.address.toB256());
     }
   }, [wallet]);
+
+  const handleCopyAddress = () => {
+    if (address) {
+      navigator.clipboard.writeText(address)
+        .then(() => {
+          toast.success('Address copied to clipboard!');
+        })
+        .catch(err => {
+          console.error('Failed to copy address: ', err);
+          toast.error('Failed to copy address');
+        });
+    }
+  };
 
   if (variant === 'trade') {
     return (
@@ -48,7 +62,11 @@ function WalletConnect({ variant = 'header', tradeType = 'buy', tokenSymbol = 'F
         </button>
       ) : (
         <div className="flex items-center space-x-2 bg-fuel-dark-700 px-4 py-1.5 rounded">
-          <div className="flex items-center space-x-2 text-sm">
+          <div
+            onClick={handleCopyAddress}
+            className="flex items-center space-x-2 text-sm cursor-pointer"
+            title="Copy address"
+          >
             <Wallet className="w-4 h-4 text-fuel-green" />
             <span className="text-gray-100">
               {address.substring(0, 6)}...{address.substring(address.length - 4)}

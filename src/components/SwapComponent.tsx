@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowDownUp, Info, Settings, Loader2, Plus, ExternalLink } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import WalletConnect from './WalletConnect';
 import { Address, bn, BN, ScriptTransactionRequest, WalletUnlocked, Wallet, Provider } from 'fuels';
 import ETHIcon from '../assets/eth.svg';
 import FUELIcon from '../assets/fuelsymbol.svg';
@@ -81,9 +80,6 @@ function SwapComponent() {
   const [fromToken, setFromToken] = useState<TokenData>(AVAILABLE_TOKENS[0]);
 
   const [toToken, setToToken] = useState<TokenData>(AVAILABLE_TOKENS[1]);
-
-  const [slippageDisplay, setSlippageDisplay] = useState('2.00');
-  const [deadlineDisplay, setDeadlineDisplay] = useState('30');
 
   const [activeSwapType, setActiveSwapType] = useState<SwapType>('swap');
   const [limitPrice, setLimitPrice] = useState('');
@@ -203,6 +199,25 @@ function SwapComponent() {
       }
     };
 
+    // --- Add balance check ---
+    try {
+      const balance = await wallet.getBalance(token.assetID);
+      const mintAmountNumber = getMintAmount(token.symbol);
+      // Assuming 9 decimals for comparison consistency
+      const mintAmountInSmallestUnitBN = bn.parseUnits(mintAmountNumber.toString(), 0);
+
+      // Check if balance is greater than 2x the mint amount
+      if (balance.gt(mintAmountInSmallestUnitBN.mul(2))) {
+        toast.error(`You already have sufficient ${token.symbol} balance.`);
+        return; // Stop the minting process
+      }
+    } catch (error) {
+       console.error(`Error checking balance for ${token.symbol}:`, error);
+       toast.error(`Could not check ${token.symbol} balance. Please try again.`);
+       return; // Stop if balance check fails
+    }
+    // --- End balance check ---
+
     toast.promise(
       fetch(`${BASE_URL}/mint`, {
         method: 'POST',
@@ -290,7 +305,7 @@ function SwapComponent() {
       // Create new request from response
       const responseRequest = new ScriptTransactionRequest();
       Object.assign(responseRequest, data.request);
-
+      console.log("Response request:", responseRequest);
       // First, handle just the transaction sending with toast.promise
       const tx = await toast.promise(
         wallet.sendTransaction(responseRequest),
@@ -332,20 +347,47 @@ function SwapComponent() {
     onClose, 
     onSelect, 
     selectedToken,
-    excludeToken 
+    excludeToken,
+    triggerRef
   }: { 
     isOpen: boolean; 
     onClose: () => void; 
     onSelect: (token: TokenData) => void;
     selectedToken: TokenData;
     excludeToken?: string; 
+    triggerRef: React.RefObject<HTMLButtonElement>;
   }) {
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (!isOpen) return;
+
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          dropdownRef.current &&
+          !dropdownRef.current.contains(event.target as Node) &&
+          triggerRef.current &&
+          !triggerRef.current.contains(event.target as Node)
+        ) {
+          onClose();
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, [isOpen, onClose, triggerRef]);
+
     if (!isOpen) return null;
 
     const availableTokens = AVAILABLE_TOKENS.filter(token => token.symbol !== excludeToken);
 
     return (
-      <div className="absolute top-full left-0 mt-2 w-[240px] bg-fuel-dark-800 rounded-xl shadow-lg border border-fuel-dark-600 z-50">
+      <div
+        ref={dropdownRef}
+        className="absolute top-full left-0 mt-2 w-[240px] bg-fuel-dark-800 rounded-xl shadow-lg border border-fuel-dark-600 z-50"
+      >
         <div className="p-3">
           <div className="text-sm text-gray-400 mb-2">Select Token</div>
           <div className="space-y-1">
@@ -384,20 +426,46 @@ function SwapComponent() {
     onClose, 
     onSelect, 
     selectedToken,
-    excludeToken 
+    triggerRef
   }: { 
     isOpen: boolean; 
     onClose: () => void; 
     onSelect: (token: TokenData) => void;
     selectedToken: TokenData;
     excludeToken?: string; 
+    triggerRef: React.RefObject<HTMLButtonElement>;
   }) {
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (!isOpen) return;
+
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          dropdownRef.current &&
+          !dropdownRef.current.contains(event.target as Node) &&
+          triggerRef.current &&
+          !triggerRef.current.contains(event.target as Node)
+        ) {
+          onClose();
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, [isOpen, onClose, triggerRef]);
+
     if (!isOpen) return null;
 
     const availableTokens = AVAILABLE_TOKENS.filter(token => token.symbol === "USDC");
 
     return (
-      <div className="absolute top-full left-0 mt-2 w-[240px] bg-fuel-dark-800 rounded-xl shadow-lg border border-fuel-dark-600 z-50">
+      <div
+        ref={dropdownRef}
+        className="absolute top-full left-0 mt-2 w-[240px] bg-fuel-dark-800 rounded-xl shadow-lg border border-fuel-dark-600 z-50"
+      >
         <div className="p-3">
           <div className="text-sm text-gray-400 mb-2">Select Token</div>
           <div className="space-y-1">
@@ -435,9 +503,11 @@ function SwapComponent() {
   // Add this new useEffect for fuel transfer
   useEffect(() => {
     const checkAndTransferFuel = async () => {
+      console.log("Checking and transferring fuel...");
       if (!wallet) return;
-      const ETHBalance = await wallet.getBalance(BASE_ASSET_ID);
 
+      const ETHBalance = await wallet.getBalance(BASE_ASSET_ID);
+      console.log("ETH Balance:", Number(ETHBalance));
       if (ETHBalance.lt(3000000) ) {
         try {
           const provider = new Provider("https://testnet.fuel.network/v1/graphql");
@@ -541,6 +611,10 @@ function SwapComponent() {
       hasInitialMintRef.current = false;
     }
   }, [isConnected]);
+
+  // Add refs for the trigger buttons
+  const fromTokenTriggerRef = useRef<HTMLButtonElement>(null);
+  const toTokenTriggerRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="min-h-screen bg-fuel-dark-800 py-1 sm:py-16 overflow-y-auto relative">
@@ -770,6 +844,7 @@ function SwapComponent() {
                 <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
                   <div className="relative">
                     <button
+                      ref={fromTokenTriggerRef}
                       className="flex items-center space-x-1.5 px-1 sm:px-1.5 py-0.5 sm:py-1 rounded-lg hover:bg-fuel-dark-600 min-w-[80px] sm:min-w-[90px]"
                       onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
                     >
@@ -787,6 +862,7 @@ function SwapComponent() {
                       onSelect={setFromToken}
                       selectedToken={fromToken}
                       excludeToken={toToken.symbol}
+                      triggerRef={fromTokenTriggerRef}
                     />
                   </div>
                   <input
@@ -822,10 +898,10 @@ function SwapComponent() {
               {/* Swap Direction Button */}
               <div className="flex justify-center relative z-10">
                 <button
-                  className="p-2 rounded-xl bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-all duration-200 border-4 border-fuel-dark-800 shadow-lg group"
+                  className="p-2 rounded-xl bg-fuel-dark-700 transition-all duration-200 border-4 border-fuel-dark-800 shadow-lg group cursor-default"
                   // onClick={handleSwapTokens}
                 >
-                  <ArrowDownUp className="w-5 h-5 text-fuel-green group-hover:rotate-180 transition-transform duration-200" />
+                  <ArrowDownUp className="w-5 h-5 text-fuel-green" />
                 </button>
               </div>
               <div className="space-y-2">
@@ -842,6 +918,7 @@ function SwapComponent() {
                 <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
                   <div className="relative">
                     <button
+                      ref={toTokenTriggerRef}
                       className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
                       onClick={() => setIsToTokenOpen(!isToTokenOpen)}
                     >
@@ -858,7 +935,7 @@ function SwapComponent() {
                       onClose={() => setIsToTokenOpen(false)}
                       onSelect={setToToken}
                       selectedToken={toToken}
-                      excludeToken={fromToken.symbol}
+                      triggerRef={toTokenTriggerRef}
                     />
                   </div>
                   <input
@@ -929,6 +1006,7 @@ function SwapComponent() {
                       onSelect={setFromToken}
                       selectedToken={fromToken}
                       excludeToken={toToken.symbol}
+                      triggerRef={fromTokenTriggerRef}
                     />
                   </div>
                   <input
@@ -1051,6 +1129,7 @@ function SwapComponent() {
                       onSelect={setToToken}
                       selectedToken={toToken}
                       excludeToken={fromToken.symbol}
+                      triggerRef={toTokenTriggerRef}
                     />
                   </div>
                   <input
@@ -1092,13 +1171,13 @@ function SwapComponent() {
                   1 {fromToken.symbol} ={" "}
                   {price
                     ? price.toLocaleString("en-US", {
-                        minimumFractionDigits: 3,
+                        minimumFractionDigits: 6,
                       })
                     : "..."}{" "}
                   {toToken.symbol}
-                  {priceError && (
+                  {/* {priceError && (
                     <span className="text-red-500 ml-2">{priceError}</span>
-                  )}
+                  )} */}
                 </span>
                 <Info className="w-4 h-4 text-gray-500" />
               </div>
@@ -1119,28 +1198,12 @@ function SwapComponent() {
               <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-gray-400">Network costs (est.)</span>
                 <span className="font-medium">
-                  0.0013 ETH + gas{" "}
+                  0.00013 ETH{" "}
                   <span className="text-gray-400">(≈ $0.0038)</span>
                 </span>
               </div>
               {activeSwapType === "swap" ? (
                 <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Slippage tolerance</span>
-                    <span className="font-medium">
-                      {slippageTolerance === "auto"
-                        ? "Auto"
-                        : `${slippageDisplay}%`}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">
-                      Transaction expiration
-                    </span>
-                    <span className="font-medium">
-                      {deadlineDisplay} minutes
-                    </span>
-                  </div>
                 </>
               ) : (
                 <>

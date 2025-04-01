@@ -12,11 +12,12 @@ export default defineConfig({
     outDir: "dist",
   },
   publicDir: "public",
-  // server: {
-  //   port: 5173,
-  //   fs: {
-  //     strict: false,
-  //     allow: [".."],
-  //   },
-  // },
+  server: {
+    allowedHosts: [
+        "37ab-101-0-63-28.ngrok-free.app",
+        // You might want to keep 'localhost' and '127.0.0.1' if needed
+        // 'localhost',
+        // '127.0.0.1',
+    ],
+  },
 });
