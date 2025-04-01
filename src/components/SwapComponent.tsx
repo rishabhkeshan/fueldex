@@ -260,7 +260,7 @@ function SwapComponent() {
 
       // Get sell token amount in proper format
       const sellTokenAmount = bn.parseUnits(fromAmount, 9);
-
+      console.log("Sell token amount:", sellTokenAmount);
       // Get resources for the sell token
       const resources = await wallet.getResourcesToSpend([
         {
@@ -268,7 +268,7 @@ function SwapComponent() {
           amount: sellTokenAmount,
         },
       ]);
-
+      console.log("Resources:", resources);
       scriptTransactionRequest.addResources(resources);
 
       // Get and add base asset (gas) resources
