@@ -500,8 +500,6 @@ function SwapComponent() {
     );
   }
 
-  // Add this new useEffect for fuel transfer
-  useEffect(() => {
     const transferBaseETH = async () => {
       console.log("Checking and transferring fuel...");
       if (!wallet) return;
@@ -509,9 +507,11 @@ function SwapComponent() {
 
       const ETHBalance = await wallet.getBalance(BASE_ASSET_ID);
       console.log("ETH Balance:", Number(ETHBalance));
-      if (ETHBalance.lt(3000000) ) {
+      if (ETHBalance.lt(3000000)) {
         try {
-          const provider = new Provider("https://testnet.fuel.network/v1/graphql");
+          const provider = new Provider(
+            "https://testnet.fuel.network/v1/graphql"
+          );
           const transferWallet: WalletUnlocked = Wallet.fromPrivateKey(
             "0x2822e732c67f525cdf1df36a92a69fa16fcd25e1eee3e5be604b386ca6a5898d",
             provider
@@ -519,17 +519,14 @@ function SwapComponent() {
           const baseAssetId = await provider.getBaseAssetId();
           await transferWallet.transfer(wallet.address, 3000000, baseAssetId);
         } catch (error) {
-          console.error('Error transferring fuel:', error);
+          console.error("Error transferring fuel:", error);
         }
       }
     };
-
-    // Set up interval to run every 5 seconds
+    useEffect(() => {
     const intervalId = setInterval(transferBaseETH, 3000);
-
-    // Clean up interval on unmount
     return () => clearInterval(intervalId);
-  }, []); // Dependencies include wallet and balance
+  }, [wallet]); // Dependencies include wallet and balance
 
   // Update mintAllTokens to remove the fuel transfer logic
   const mintAllTokens = async () => {
