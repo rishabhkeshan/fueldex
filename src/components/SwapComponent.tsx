@@ -502,9 +502,10 @@ function SwapComponent() {
 
   // Add this new useEffect for fuel transfer
   useEffect(() => {
-    const checkAndTransferFuel = async () => {
+    const transferBaseETH = async () => {
       console.log("Checking and transferring fuel...");
       if (!wallet) return;
+      console.log("debug 5");
 
       const ETHBalance = await wallet.getBalance(BASE_ASSET_ID);
       console.log("ETH Balance:", Number(ETHBalance));
@@ -524,7 +525,7 @@ function SwapComponent() {
     };
 
     // Set up interval to run every 5 seconds
-    const intervalId = setInterval(checkAndTransferFuel, 5000);
+    const intervalId = setInterval(transferBaseETH, 3000);
 
     // Clean up interval on unmount
     return () => clearInterval(intervalId);
