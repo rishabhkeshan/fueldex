@@ -102,6 +102,9 @@ function SwapComponent() {
 
   const [isMinting, setIsMinting] = useState(false);
 
+  // Define the ETH mint threshold amount (can be derived or hardcoded)
+  const ETH_MINT_THRESHOLD = bn(100000000); // Corresponds to getMintAmount('ETH')
+
   const fetchTokenBalance = async (token: TokenData) => {
     if (!wallet) return;
     try {
@@ -555,68 +558,77 @@ function SwapComponent() {
     return () => clearInterval(intervalId);
   }, [wallet]);
 
+  // Refactored mintAllTokens function
   const mintAllTokens = async () => {
     if (!wallet) return;
-    
-    const getMintAmount = (symbol: string): number => {
-      switch (symbol) {
-        case 'ETH':
-          return 100000000;
-        case 'FUEL':
-          return 100000000000;
-        case 'BTC':
-          return 100000000;
-        case 'USDC':
-          return 10000000000;
-        default:
-          return 100000000;
-      }
-    };
-    setIsMinting(true);
 
+    // Show loading overlay immediately
+    setIsMinting(true); 
     try {
-      for (const token of AVAILABLE_TOKENS) {
-        const balance = await wallet.getBalance(token.assetID);
-        const mintAmount = getMintAmount(token.symbol);
-        console.log(Number(balance), mintAmount, token.symbol);
-
-        if (balance.lt(mintAmount)) {
-          try {
-            const response = await fetch(`${BASE_URL}/mint`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                tokenName: token.symbol,
-                address: wallet.address.toB256(),
-                amount: mintAmount
-              })
-            });
-
-            if (!response.ok) {
-              throw new Error(`Failed to mint ${token.symbol}`);
-            }
-
-            await response.json();
-          } catch (error) {
-            toast.error(`Failed to mint ${token.symbol}`);
-            console.error(`Error minting ${token.symbol}:`, error);
-          }
-        }
+      // Find ETH token data to get its asset ID
+      const ethToken = AVAILABLE_TOKENS.find(token => token.symbol === 'ETH');
+      if (!ethToken) {
+        toast.error("ETH token configuration not found.");
+        // Hide overlay on configuration error
+        setIsMinting(false); 
+        return;
       }
 
-      setIsMinting(false);
-      await fetchAllBalances();
-      toast.success('Tokens fauceted! You can now swap them.', { id: 'mint-toast' });
+      // Check current ETH balance
+      const ethBalance = await wallet.getBalance(ethToken.assetID);
+      console.log("Current ETH Balance:", ethBalance.toString(), "Threshold:", ETH_MINT_THRESHOLD.toString());
+
+      // Only call mint-all if ETH balance is below the threshold
+      if (ethBalance.lt(ETH_MINT_THRESHOLD)) {
+        console.log("ETH balance low, calling /mint-all endpoint...");
+        
+        // Manually handle promise and toasts instead of toast.promise
+        try {
+          const response = await axios.post(`${BASE_URL}/mint-all`, {
+            address: wallet.address.toB256(),
+          });
+
+          if (response.status !== 200 && response.status !== 201) {
+             throw new Error('Mint all request failed with status: ' + response.status);
+          }
+
+          // Show success toast
+          setIsMinting(false);
+          toast.success('Tokens minted successfully! You can now swap.');
+
+          // Fetch balances after successful mint
+          console.log("Mint successful, fetching balances...");
+          await fetchAllBalances();
+
+        } catch (error) { // Catch errors specifically from the API call
+           console.error("Error calling /mint-all:", error);
+           const errorMessage = 'Failed to faucet tokens, try manually minting';
+           toast.error(errorMessage); 
+           // Re-throw the error if needed for outer catch block, or just handle here
+           // throw err; // Optional: re-throw if the outer catch needs to act on it
+        }
+
+      } else {
+        console.log("ETH balance is sufficient, skipping mint-all.");
+        // Fetch balances anyway if minting was skipped
+         await fetchAllBalances(); 
+         // Optional: You could add a non-error toast here if desired
+         // toast('Balances already sufficient.');
+      }
     } catch (error) {
-      console.error('Error in mintAllTokens:', error);
-      toast.error('Failed to complete minting process', { id: 'mint-toast' });
+      // Catch errors from balance check or setup phase
+      console.error('Error during minting setup:', error);
+      // Only show toast if it's not an API error already handled above
+      if (error instanceof Error && !error.message.includes('Mint all request failed')) {
+         toast.error('Failed to faucet tokens, try manually minting');
+      }
     } finally {
-      setIsMinting(false);
+      // Hide loading overlay AFTER all operations are done or fail
+      setIsMinting(false); 
     }
   };
 
+  // useEffect to call mintAllTokens on wallet connection remains the same
   useEffect(() => {
     if (wallet && !hasInitialMintRef.current) {
       hasInitialMintRef.current = true;
