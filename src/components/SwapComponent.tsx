@@ -781,7 +781,7 @@ function SwapComponent() {
                 </div>
               </div>
 
-              <div className="flex justify-center relative z-10">
+              <div className="flex justify-center relative z-10 mb-1">
                 <button
                   className="p-2 rounded-xl bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-all duration-200 border-4 border-fuel-dark-800 shadow-lg group"
                   onClick={handleSwapTokens}
@@ -846,9 +846,9 @@ function SwapComponent() {
                     }}
                   />
                 </div>
-                <div className="text-right text-xs text-gray-400">
+                {/* <div className="text-right text-xs text-gray-400">
                   ≈ $<span className="text-white">{toToken.usdValue}</span>
-                </div>
+                </div> */}
               </div>
             </>
           ) : (
