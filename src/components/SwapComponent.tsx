@@ -298,6 +298,7 @@ function SwapComponent() {
       const { data } = await axios.post(`${BASE_URL}/fill-order`, {
         scriptRequest: scriptTransactionRequest.toJSON(),
         sellTokenName: fromToken.symbol.toLowerCase(),
+        buyTokenName: toToken.symbol.toLowerCase(),
         sellTokenAmount: sellTokenAmount.toString(),
         recepientAddress: wallet.address.toB256(),
       });
