@@ -633,6 +633,38 @@ function SwapComponent() {
   const fromTokenTriggerRef = useRef<HTMLButtonElement>(null);
   const toTokenTriggerRef = useRef<HTMLButtonElement>(null);
 
+  // Effect to update document title
+  useEffect(() => {
+    const updateTitle = () => {
+      let title = "O2 Swap"; // Default title
+
+      if (fromToken && toToken) {
+        const pair = `${fromToken.symbol}/${toToken.symbol}`;
+        if (arePricesLoading) {
+          title = `O2 | ${pair}`;
+        } else if (fromTokenPrice && toTokenPrice && toTokenPrice > 0) {
+          const relativePrice = (fromTokenPrice / toTokenPrice).toLocaleString("en-US", {
+            minimumFractionDigits: 3, // Adjust precision as needed
+            maximumFractionDigits: 3,
+          });
+          title = `O2 | ${relativePrice} | ${pair}`;
+        } else {
+           title = `O2 Swap`; // Price not available state
+        }
+      }
+      
+      document.title = title;
+    };
+
+    updateTitle(); // Update title initially and on changes
+
+    // Optional: Cleanup function to reset title when component unmounts
+    // return () => {
+    //   document.title = "O2 Swap"; // Or your default app title
+    // };
+    
+  }, [fromToken, toToken, fromTokenPrice, toTokenPrice, arePricesLoading]); // Dependencies
+
   return (
     <div className="min-h-screen bg-fuel-dark-800 py-1 sm:py-16 overflow-y-auto relative">
       {isMinting && (
