@@ -594,7 +594,7 @@ function SwapComponent() {
 
           // Show success toast
           setIsMinting(false);
-          toast.success('Tokens minted successfully! You can now swap.');
+          toast.success('Tokens fauceted successfully! You can now swap.');
 
           // Fetch balances after successful mint
           console.log("Mint successful, fetching balances...");
