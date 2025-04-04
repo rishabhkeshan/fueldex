@@ -88,19 +88,18 @@ function SwapComponent() {
 
   const [enablePartialExecutions, setEnablePartialExecutions] = useState(false);
 
-  const [isPriceLoading, setIsPriceLoading] = useState(false);
-  const [price, setPrice] = useState<number | null>(null);
-  const [priceError, setError] = useState<string | null>(null);
+  const [arePricesLoading, setArePricesLoading] = useState(false);
+  const [fromTokenPrice, setFromTokenPrice] = useState<number | null>(null);
+  const [toTokenPrice, setToTokenPrice] = useState<number | null>(null);
+  const [priceFetchError, setPriceFetchError] = useState<string | null>(null);
 
   const [tokenBalances, setTokenBalances] = useState<{ [key: string]: string }>({});
 
   const [isSwapping, setIsSwapping] = useState(false);
   const {isConnected} = useIsConnected();
 
-  // Add ref to track if tokens have been minted
   const hasInitialMintRef = useRef(false);
 
-  // Add new state for minting status
   const [isMinting, setIsMinting] = useState(false);
 
   const fetchTokenBalance = async (token: TokenData) => {
@@ -139,35 +138,46 @@ function SwapComponent() {
   useEffect(() => {
     setFromAmount('');
     setToAmount('');
-  }, [fromToken.symbol]);
-
-  const fetchPrice = async (symbol: string) => {
-    setIsPriceLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${BASE_URL}/price/${symbol}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch price');
-      }
-      const data = await response.json();
-      console.log(data);
-      setPrice(data.price);
-    } catch (err) {
-      setError('Failed to fetch price');
-      console.error('Error fetching price:', err);
-    } finally {
-      setIsPriceLoading(false);
-    }
-  };
-
-  useEffect(() => {
     if (fromToken && toToken) {
-      fetchPrice(fromToken.symbol);
+      fetchTokenPrices(fromToken.symbol, toToken.symbol);
     }
   }, [fromToken.symbol, toToken.symbol]);
 
-  const handlePriceRefresh = async() => {
-    await fetchPrice(fromToken.symbol);
+  const fetchTokenPrices = async (fromSymbol: string, toSymbol: string) => {
+    setArePricesLoading(true);
+    setPriceFetchError(null);
+    setFromTokenPrice(null);
+    setToTokenPrice(null);
+
+    try {
+      const [fromResponse, toResponse] = await Promise.all([
+        fetch(`${BASE_URL}/price/${fromSymbol}`),
+        fetch(`${BASE_URL}/price/${toSymbol}`)
+      ]);
+
+      if (!fromResponse.ok || !toResponse.ok) {
+        throw new Error('Failed to fetch one or more token prices');
+      }
+
+      const fromData = await fromResponse.json();
+      const toData = await toResponse.json();
+
+      console.log('Fetched prices:', { from: fromData.price, to: toData.price });
+      setFromTokenPrice(fromData.price);
+      setToTokenPrice(toData.price);
+
+    } catch (err) {
+      setPriceFetchError('Failed to fetch prices');
+      console.error('Error fetching prices:', err);
+    } finally {
+      setArePricesLoading(false);
+    }
+  };
+
+  const handlePriceRefresh = async () => {
+    if (fromToken && toToken) {
+      await fetchTokenPrices(fromToken.symbol, toToken.symbol);
+    }
   };
 
   const handleSwapTokens = () => {
@@ -199,24 +209,20 @@ function SwapComponent() {
       }
     };
 
-    // --- Add balance check ---
     try {
       const balance = await wallet.getBalance(token.assetID);
       const mintAmountNumber = getMintAmount(token.symbol);
-      // Assuming 9 decimals for comparison consistency
       const mintAmountInSmallestUnitBN = bn.parseUnits(mintAmountNumber.toString(), 0);
 
-      // Check if balance is greater than 2x the mint amount
       if (balance.gt(mintAmountInSmallestUnitBN.mul(2))) {
         toast.error(`You already have sufficient ${token.symbol} balance.`);
-        return; // Stop the minting process
+        return;
       }
     } catch (error) {
        console.error(`Error checking balance for ${token.symbol}:`, error);
        toast.error(`Could not check ${token.symbol} balance. Please try again.`);
-       return; // Stop if balance check fails
+       return;
     }
-    // --- End balance check ---
 
     toast.promise(
       fetch(`${BASE_URL}/mint`, {
@@ -234,7 +240,6 @@ function SwapComponent() {
           throw new Error('Failed to mint');
         }
         const result = await response.json();
-        // Fetch updated balances after successful mint
         await fetchAllBalances();
         return result;
       }),
@@ -255,13 +260,10 @@ function SwapComponent() {
 
     setIsSwapping(true);
     try {
-      // Create script transaction request
       const scriptTransactionRequest = new ScriptTransactionRequest();
 
-      // Get sell token amount in proper format
       const sellTokenAmount = bn.parseUnits(fromAmount, 9);
       console.log("Sell token amount:", sellTokenAmount);
-      // Get resources for the sell token
       const resources = await wallet.getResourcesToSpend([
         {
           assetId: fromToken.assetID,
@@ -271,7 +273,6 @@ function SwapComponent() {
       console.log("Resources:", resources);
       scriptTransactionRequest.addResources(resources);
       console.log("debug 1");
-      // Get and add base asset (gas) resources
       const baseResources = await wallet.getResourcesToSpend([
         {
           assetId: await wallet.provider.getBaseAssetId(),
@@ -281,7 +282,6 @@ function SwapComponent() {
       console.log("debug 2");
       scriptTransactionRequest.addResources(baseResources);
       console.log("debug 3");
-      // Add outputs
       const solverAddress = Address.fromB256("0xf8cf8acbe8b4d970c3e1c9ffed11e8b55abfc5287ad7f5e4d0240a4f0651d658");
       scriptTransactionRequest.addCoinOutput(
         solverAddress,
@@ -294,7 +294,6 @@ function SwapComponent() {
       );
       console.log("debug 4");
       console.log("Sending fill order request to backend...");
-      // Send fill order request to backend
       const { data } = await axios.post(`${BASE_URL}/fill-order`, {
         scriptRequest: scriptTransactionRequest.toJSON(),
         sellTokenName: fromToken.symbol.toLowerCase(),
@@ -303,11 +302,9 @@ function SwapComponent() {
         recepientAddress: wallet.address.toB256(),
       });
 
-      // Create new request from response
       const responseRequest = new ScriptTransactionRequest();
       Object.assign(responseRequest, data.request);
       console.log("Response request:", responseRequest);
-      // First, handle just the transaction sending with toast.promise
       const tx = await toast.promise(
         wallet.sendTransaction(responseRequest),
         {
@@ -330,7 +327,6 @@ function SwapComponent() {
         }
       );
 
-      // Handle confirmation and balance updates in background
       tx.waitForResult().then(async () => {
         await fetchAllBalances();
       });
@@ -382,7 +378,9 @@ function SwapComponent() {
 
     if (!isOpen) return null;
 
-    const availableTokens = AVAILABLE_TOKENS.filter(token => token.symbol !== excludeToken);
+    const availableTokens = AVAILABLE_TOKENS.filter(
+      (token) => token.symbol !== excludeToken
+    );
 
     return (
       <div
@@ -433,7 +431,6 @@ function SwapComponent() {
     onClose: () => void; 
     onSelect: (token: TokenData) => void;
     selectedToken: TokenData;
-    excludeToken?: string; 
     triggerRef: React.RefObject<HTMLButtonElement>;
   }) {
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -460,7 +457,9 @@ function SwapComponent() {
 
     if (!isOpen) return null;
 
-    const availableTokens = AVAILABLE_TOKENS.filter(token => token.symbol === "USDC");
+    const availableTokens = AVAILABLE_TOKENS.filter(
+      (token) => token.symbol !== fromToken.symbol
+    );
 
     return (
       <div
@@ -474,7 +473,9 @@ function SwapComponent() {
               <button
                 key={token.symbol}
                 className={`w-full flex items-center space-x-3 p-2.5 rounded-lg hover:bg-fuel-dark-700 transition-colors ${
-                  selectedToken.symbol === token.symbol ? 'bg-fuel-dark-700' : ''
+                  selectedToken.symbol === token.symbol
+                    ? "bg-fuel-dark-700"
+                    : ""
                 }`}
                 onClick={() => {
                   onSelect(token);
@@ -487,7 +488,7 @@ function SwapComponent() {
                 <div className="flex flex-col items-start flex-1">
                   <span className="text-sm font-medium">{token.symbol}</span>
                   <span className="text-xs text-gray-400">
-                    Balance: {tokenBalances[token.symbol] || '0.000000'}
+                    Balance: {tokenBalances[token.symbol] || "0.000000"}
                   </span>
                 </div>
                 {selectedToken.symbol === token.symbol && (
@@ -527,9 +528,8 @@ function SwapComponent() {
     useEffect(() => {
     const intervalId = setInterval(transferBaseETH, 3000);
     return () => clearInterval(intervalId);
-  }, [wallet]); // Dependencies include wallet and balance
+  }, [wallet]);
 
-  // Update mintAllTokens to remove the fuel transfer logic
   const mintAllTokens = async () => {
     if (!wallet) return;
     
@@ -550,15 +550,11 @@ function SwapComponent() {
     setIsMinting(true);
 
     try {
-      // toast.loading('Checking balances and minting tokens...', { id: 'mint-toast' });
-
       for (const token of AVAILABLE_TOKENS) {
-        // Check current balance
         const balance = await wallet.getBalance(token.assetID);
         const mintAmount = getMintAmount(token.symbol);
         console.log(Number(balance), mintAmount, token.symbol);
 
-        // Only mint if balance is less than mint amount
         if (balance.lt(mintAmount)) {
           try {
             const response = await fetch(`${BASE_URL}/mint`, {
@@ -596,7 +592,6 @@ function SwapComponent() {
     }
   };
 
-  // Update the useEffect for minting
   useEffect(() => {
     if (wallet && !hasInitialMintRef.current) {
       hasInitialMintRef.current = true;
@@ -604,34 +599,33 @@ function SwapComponent() {
     }
   }, [isConnected, wallet]);
 
-  // Optional: Reset the ref when wallet disconnects
   useEffect(() => {
     if (!isConnected) {
       hasInitialMintRef.current = false;
     }
   }, [isConnected]);
 
-  // Add refs for the trigger buttons
   const fromTokenTriggerRef = useRef<HTMLButtonElement>(null);
   const toTokenTriggerRef = useRef<HTMLButtonElement>(null);
 
   return (
     <div className="min-h-screen bg-fuel-dark-800 py-1 sm:py-16 overflow-y-auto relative">
-      {/* Loading Overlay */}
       {isMinting && (
         <div className="fixed inset-0 bg-fuel-dark-900/80 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-fuel-dark-800 rounded-xl p-6 max-w-sm mx-4 text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-fuel-green" />
-            <h3 className="text-lg font-medium mb-2">Initializing Your Wallet</h3>
+            <h3 className="text-lg font-medium mb-2">
+              Initializing Your Wallet
+            </h3>
             <p className="text-sm text-gray-400">
-              Please wait while we mint your test tokens. This may take a few moments...
+              Please wait while we mint your test tokens. This may take a few
+              moments...
             </p>
           </div>
         </div>
       )}
 
       <div className="w-full max-w-[420px] mx-auto px-2 mb-8 mt-4 sm:mt-0">
-        {/* Add mint section with label */}
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-400">
@@ -653,181 +647,8 @@ function SwapComponent() {
           </div>
         </div>
 
-        {/* <div className="flex items-center justify-between mb-3 sm:mb-4">
-          <div className="flex p-1 bg-fuel-dark-700 rounded-lg">
-            <button
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                activeSwapType === "swap"
-                  ? "bg-fuel-dark-600 text-white shadow-sm"
-                  : "text-gray-400 hover:text-gray-300"
-              }`}
-              onClick={() => setActiveSwapType("swap")}
-            >
-              Swap
-            </button>
-            <button
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-                activeSwapType === "limit"
-                  ? "bg-fuel-dark-600 text-white shadow-sm"
-                  : "text-gray-400 hover:text-gray-300"
-              }`}
-              onClick={() => setActiveSwapType("limit")}
-            >
-              Limit
-            </button>
-          </div>
-          <div className="relative">
-            <button
-              className="p-1.5 sm:p-2 hover:bg-fuel-dark-700 rounded-full transition-colors"
-              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-            >
-              <Settings className="w-4 h-4 text-gray-400" />
-            </button>
-
-            {isSettingsOpen && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-fuel-dark-800 rounded-xl shadow-lg border border-fuel-dark-600 z-50">
-                <div className="p-4">
-                  {activeSwapType === "swap" ? (
-                    <>
-                      <h3 className="text-sm font-medium mb-4">
-                        Transaction Settings
-                      </h3>
-
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-1">
-                            <span className="text-sm text-gray-400">
-                              MEV-protected slippage
-                            </span>
-                            <Info className="w-4 h-4 text-gray-500" />
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            className={`px-3 py-1.5 rounded-lg text-sm ${
-                              slippageTolerance === "auto"
-                                ? "bg-fuel-green text-fuel-dark-900"
-                                : "bg-fuel-dark-700 text-gray-400"
-                            }`}
-                            onClick={() => setSlippageTolerance("auto")}
-                          >
-                            Auto
-                          </button>
-                          <div className="relative flex-1">
-                            <input
-                              type="text"
-                              className="w-full bg-fuel-dark-700 rounded-lg px-3 py-1.5 text-sm text-right pr-8"
-                              value={
-                                slippageTolerance === "auto"
-                                  ? slippageDisplay
-                                  : slippageTolerance
-                              }
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                if (slippageTolerance !== "auto") {
-                                  setSlippageTolerance(value);
-                                  setSlippageDisplay(value);
-                                }
-                              }}
-                              disabled={slippageTolerance === "auto"}
-                            />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                              %
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 mb-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-1">
-                            <span className="text-sm text-gray-400">
-                              Swap deadline
-                            </span>
-                            <Info className="w-4 h-4 text-gray-500" />
-                          </div>
-                        </div>
-                        <div className="relative">
-                          <input
-                            type="text"
-                            className="w-full bg-fuel-dark-700 rounded-lg px-3 py-1.5 text-sm text-left"
-                            value={deadlineDisplay}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setDeadlineDisplay(value);
-                              setSwapDeadline(value);
-                            }}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                            minutes
-                          </span>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <h3 className="text-sm font-medium mb-4">
-                        Interface Settings
-                      </h3>
-
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-1">
-                          <span className="text-sm text-gray-400">
-                            Custom Recipient
-                          </span>
-                          <Info className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <button
-                          className={`w-10 h-6 rounded-full transition-colors relative ${
-                            customRecipient
-                              ? "bg-fuel-green"
-                              : "bg-fuel-dark-700"
-                          }`}
-                          onClick={() => setCustomRecipient(!customRecipient)}
-                        >
-                          <div
-                            className={`absolute w-4 h-4 rounded-full bg-white top-1 transition-all ${
-                              customRecipient ? "right-1" : "left-1"
-                            }`}
-                          />
-                        </button>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-1">
-                          <span className="text-sm text-gray-400">
-                            Enable Partial Executions
-                          </span>
-                          <Info className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <button
-                          className={`w-10 h-6 rounded-full transition-colors relative ${
-                            enablePartialExecutions
-                              ? "bg-fuel-green"
-                              : "bg-fuel-dark-700"
-                          }`}
-                          onClick={() =>
-                            setEnablePartialExecutions(!enablePartialExecutions)
-                          }
-                        >
-                          <div
-                            className={`absolute w-4 h-4 rounded-full bg-white top-1 transition-all ${
-                              enablePartialExecutions ? "right-1" : "left-1"
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div> */}
-
         <div className="bg-fuel-dark-800 rounded-xl p-3 sm:p-4 shadow-lg border border-fuel-dark-600">
           {activeSwapType === "swap" ? (
-            // Swap Mode UI
             <>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
@@ -871,36 +692,32 @@ function SwapComponent() {
                     value={fromAmount}
                     onChange={async (e) => {
                       const value = e.target.value;
+                      const numericValue = parseFloat(value);
                       setFromAmount(value);
 
-                      if (value) {
-                        // Fetch latest price when amount changes
-                        await fetchPrice(fromToken.symbol);
-                        // Calculate to amount based on new price
-                        if (price) {
-                          const calculatedAmount = (
-                            parseFloat(value) * price
-                          ).toFixed(6);
-                          setToAmount(calculatedAmount);
-                        }
-                      } else {
+                      if (!isNaN(numericValue) && numericValue > 0 && fromTokenPrice && toTokenPrice && toTokenPrice > 0) {
+                        const calculatedAmount = (
+                          numericValue * (fromTokenPrice / toTokenPrice)
+                        ).toFixed(6);
+                        setToAmount(calculatedAmount);
+                      } else if (value === '' || numericValue === 0) {
                         setToAmount("");
+                      } else if (!fromTokenPrice || !toTokenPrice) {
+                        await fetchTokenPrices(fromToken.symbol, toToken.symbol);
                       }
                     }}
                   />
                 </div>
                 <div className="text-right text-xs text-gray-400">
-                  {/* ≈ $<span className="text-white">{fromToken.usdValue}</span> */}
                 </div>
               </div>
 
-              {/* Swap Direction Button */}
               <div className="flex justify-center relative z-10">
                 <button
-                  className="p-2 rounded-xl bg-fuel-dark-700 transition-all duration-200 border-4 border-fuel-dark-800 shadow-lg group cursor-default"
-                  // onClick={handleSwapTokens}
+                  className="p-2 rounded-xl bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-all duration-200 border-4 border-fuel-dark-800 shadow-lg group"
+                  onClick={handleSwapTokens}
                 >
-                  <ArrowDownUp className="w-5 h-5 text-fuel-green" />
+                  <ArrowDownUp className="w-5 h-5 text-fuel-green group-hover:rotate-180 transition-transform duration-200" />
                 </button>
               </div>
               <div className="space-y-2">
@@ -944,26 +761,24 @@ function SwapComponent() {
                     value={toAmount}
                     onChange={async (e) => {
                       const value = e.target.value;
+                      const numericValue = parseFloat(value);
                       setToAmount(value);
 
-                      if (value) {
-                        // Fetch latest price when amount changes
-                        await fetchPrice(fromToken.symbol);
-                        // Calculate from amount based on new price
-                        if (price) {
-                          const calculatedAmount = (
-                            parseFloat(value) / price
-                          ).toFixed(6);
-                          setFromAmount(calculatedAmount);
-                        }
-                      } else {
+                      if (!isNaN(numericValue) && numericValue > 0 && fromTokenPrice && toTokenPrice && fromTokenPrice > 0) {
+                        const calculatedAmount = (
+                          numericValue * (toTokenPrice / fromTokenPrice)
+                        ).toFixed(6);
+                        setFromAmount(calculatedAmount);
+                      } else if (value === '' || numericValue === 0) {
                         setFromAmount("");
+                      } else if (!fromTokenPrice || !toTokenPrice) {
+                        await fetchTokenPrices(fromToken.symbol, toToken.symbol);
                       }
                     }}
                   />
                 </div>
                 <div className="text-right text-xs text-gray-400">
-                  {/* ≈ $<span className="text-white">{toToken.usdValue}</span> */}
+                  ≈ $<span className="text-white">{toToken.usdValue}</span>
                 </div>
               </div>
             </>
@@ -1015,20 +830,18 @@ function SwapComponent() {
                     value={fromAmount}
                     onChange={async (e) => {
                       const value = e.target.value;
+                      const numericValue = parseFloat(value);
                       setFromAmount(value);
 
-                      if (value) {
-                        // Fetch latest price when amount changes
-                        await fetchPrice(fromToken.symbol);
-                        // Calculate to amount based on new price
-                        if (price) {
-                          const calculatedAmount = (
-                            parseFloat(value) * price
-                          ).toFixed(6);
-                          setToAmount(calculatedAmount);
-                        }
-                      } else {
+                      if (!isNaN(numericValue) && numericValue > 0 && fromTokenPrice && toTokenPrice && fromTokenPrice > 0) {
+                        const calculatedAmount = (
+                          numericValue * (fromTokenPrice / toTokenPrice)
+                        ).toFixed(6);
+                        setToAmount(calculatedAmount);
+                      } else if (value === '' || numericValue === 0) {
                         setToAmount("");
+                      } else if (!fromTokenPrice || !toTokenPrice) {
+                        await fetchTokenPrices(fromToken.symbol, toToken.symbol);
                       }
                     }}
                   />
@@ -1138,20 +951,18 @@ function SwapComponent() {
                     value={toAmount}
                     onChange={async (e) => {
                       const value = e.target.value;
+                      const numericValue = parseFloat(value);
                       setToAmount(value);
 
-                      if (value) {
-                        // Fetch latest price when amount changes
-                        await fetchPrice(fromToken.symbol);
-                        // Calculate from amount based on new price
-                        if (price) {
-                          const calculatedAmount = (
-                            parseFloat(value) / price
-                          ).toFixed(6);
-                          setFromAmount(calculatedAmount);
-                        }
-                      } else {
+                      if (!isNaN(numericValue) && numericValue > 0 && fromTokenPrice && toTokenPrice && fromTokenPrice > 0) {
+                        const calculatedAmount = (
+                          numericValue * (toTokenPrice / fromTokenPrice)
+                        ).toFixed(6);
+                        setFromAmount(calculatedAmount);
+                      } else if (value === '' || numericValue === 0) {
                         setFromAmount("");
+                      } else if (!fromTokenPrice || !toTokenPrice) {
+                        await fetchTokenPrices(fromToken.symbol, toToken.symbol);
                       }
                     }}
                   />
@@ -1168,24 +979,27 @@ function SwapComponent() {
               <div className="flex items-center space-x-2">
                 <span className="text-xs sm:text-sm text-gray-400">
                   1 {fromToken.symbol} ={" "}
-                  {price
-                    ? price.toLocaleString("en-US", {
+                  {arePricesLoading
+                    ? "..."
+                    : fromTokenPrice && toTokenPrice && toTokenPrice > 0
+                    ? (fromTokenPrice / toTokenPrice).toLocaleString("en-US", {
                         minimumFractionDigits: 6,
+                        maximumFractionDigits: 6,
                       })
-                    : "..."}{" "}
+                    : "N/A"}{" "}
                   {toToken.symbol}
-                  {/* {priceError && (
-                    <span className="text-red-500 ml-2">{priceError}</span>
-                  )} */}
+                  {priceFetchError && (
+                    <span className="text-red-500 ml-2 text-xs">Error</span>
+                  )}
                 </span>
                 <Info className="w-4 h-4 text-gray-500" />
               </div>
               <button
                 className="flex items-center space-x-1 text-fuel-green hover:text-fuel-green-light transition-colors"
                 onClick={handlePriceRefresh}
-                disabled={isPriceLoading}
+                disabled={arePricesLoading}
               >
-                {isPriceLoading ? (
+                {arePricesLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <span className="text-sm">Refresh</span>
@@ -1197,13 +1011,11 @@ function SwapComponent() {
               <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-gray-400">Network costs (est.)</span>
                 <span className="font-medium">
-                  0.00013 ETH{" "}
-                  <span className="text-gray-400">(≈ $0.0038)</span>
+                  0.00013 ETH <span className="text-gray-400">(≈ $0.0038)</span>
                 </span>
               </div>
               {activeSwapType === "swap" ? (
-                <>
-                </>
+                <></>
               ) : (
                 <>
                   <div className="flex justify-between text-sm">
@@ -1224,8 +1036,8 @@ function SwapComponent() {
 
         <div className="mt-4">
           {activeSwapType === "swap" ? (
-            <button 
-              onClick={handleSwap} 
+            <button
+              onClick={handleSwap}
               disabled={isSwapping}
               className="w-full py-2.5 sm:py-3 bg-fuel-green text-fuel-dark-900 rounded-lg font-medium hover:bg-opacity-90 transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -1235,7 +1047,7 @@ function SwapComponent() {
                   <span>Swapping...</span>
                 </div>
               ) : (
-                'Place Order'
+                "Place Order"
               )}
             </button>
           ) : (
