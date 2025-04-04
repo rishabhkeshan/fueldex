@@ -146,8 +146,12 @@ function SwapComponent() {
   const fetchTokenPrices = async (fromSymbol: string, toSymbol: string) => {
     setArePricesLoading(true);
     setPriceFetchError(null);
-    setFromTokenPrice(null);
-    setToTokenPrice(null);
+    // Keep existing prices until new ones are fetched to avoid brief "N/A" display during refresh
+    // setFromTokenPrice(null); 
+    // setToTokenPrice(null);
+
+    let newFromPrice: number | null = null;
+    let newToPrice: number | null = null;
 
     try {
       const [fromResponse, toResponse] = await Promise.all([
@@ -162,21 +166,42 @@ function SwapComponent() {
       const fromData = await fromResponse.json();
       const toData = await toResponse.json();
 
-      console.log('Fetched prices:', { from: fromData.price, to: toData.price });
-      setFromTokenPrice(fromData.price);
-      setToTokenPrice(toData.price);
+      newFromPrice = fromData.price;
+      newToPrice = toData.price;
+
+      console.log('Fetched prices:', { from: newFromPrice, to: newToPrice });
+      setFromTokenPrice(newFromPrice);
+      setToTokenPrice(newToPrice);
 
     } catch (err) {
       setPriceFetchError('Failed to fetch prices');
+      // Clear prices on error
+      setFromTokenPrice(null);
+      setToTokenPrice(null);
       console.error('Error fetching prices:', err);
     } finally {
       setArePricesLoading(false);
     }
+    // Return fetched prices so handlePriceRefresh can use them immediately
+    return { newFromPrice, newToPrice };
   };
 
   const handlePriceRefresh = async () => {
     if (fromToken && toToken) {
-      await fetchTokenPrices(fromToken.symbol, toToken.symbol);
+      // Fetch prices and get the new values
+      const { newFromPrice, newToPrice } = await fetchTokenPrices(fromToken.symbol, toToken.symbol);
+
+      // Recalculate 'toAmount' if 'fromAmount' exists and new prices are valid
+      const currentFromAmount = parseFloat(fromAmount);
+      if (!isNaN(currentFromAmount) && currentFromAmount > 0 && newFromPrice && newToPrice && newToPrice > 0) {
+        const calculatedToAmount = (
+          currentFromAmount * (newFromPrice / newToPrice)
+        ).toFixed(6); // Use consistent precision
+        setToAmount(calculatedToAmount);
+      } else if (fromAmount === '' || currentFromAmount === 0) {
+        // Optional: Clear toAmount if fromAmount is empty after refresh
+        // setToAmount(''); 
+      }
     }
   };
 
@@ -404,10 +429,10 @@ function SwapComponent() {
                 <div className="flex items-center justify-center">
                   {token.icon}
                 </div>
-                <div className="flex flex-col items-start flex-1">
+                <div className="flex flex-col items-start flex-1 min-w-0">
                   <span className="text-sm font-medium">{token.symbol}</span>
-                  <span className="text-xs text-gray-400">
-                    Balance: {tokenBalances[token.symbol] || '0.000000'}
+                  <span className="text-xs text-gray-400 whitespace-nowrap">
+                    Balance: <span className="inline-block max-w-[100px] overflow-hidden text-ellipsis align-bottom">{tokenBalances[token.symbol] || "0.000000"}</span>
                   </span>
                 </div>
                 {selectedToken.symbol === token.symbol && (
@@ -485,10 +510,10 @@ function SwapComponent() {
                 <div className="flex items-center justify-center">
                   {token.icon}
                 </div>
-                <div className="flex flex-col items-start flex-1">
+                <div className="flex flex-col items-start flex-1 min-w-0">
                   <span className="text-sm font-medium">{token.symbol}</span>
-                  <span className="text-xs text-gray-400">
-                    Balance: {tokenBalances[token.symbol] || "0.000000"}
+                  <span className="text-xs text-gray-400 whitespace-nowrap">
+                    Balance: <span className="inline-block max-w-[100px] overflow-hidden text-ellipsis align-bottom">{tokenBalances[token.symbol] || "0.000000"}</span>
                   </span>
                 </div>
                 {selectedToken.symbol === token.symbol && (
@@ -655,7 +680,7 @@ function SwapComponent() {
                   <span className="text-gray-400 font-medium">From</span>
                   <span className="text-gray-400">
                     Balance:{" "}
-                    <span className="text-white">
+                    <span className="text-white inline-block max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap align-bottom"> 
                       {tokenBalances[fromToken.symbol] || "0.000000"}
                     </span>{" "}
                     {fromToken.symbol}
@@ -725,7 +750,7 @@ function SwapComponent() {
                   <span className="text-gray-400 font-medium">To</span>
                   <span className="text-gray-400">
                     Balance:{" "}
-                    <span className="text-white">
+                    <span className="text-white inline-block max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap align-bottom"> 
                       {tokenBalances[toToken.symbol] || "0.000000"}
                     </span>{" "}
                     {toToken.symbol}
@@ -790,7 +815,7 @@ function SwapComponent() {
                   <div className="flex items-center space-x-2">
                     <span className="text-gray-400">
                       Balance:{" "}
-                      <span className="text-white">
+                      <span className="text-white inline-block max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap align-bottom">
                         {tokenBalances[fromToken.symbol] || "0.000000"}
                       </span>{" "}
                       {fromToken.symbol}
@@ -915,7 +940,7 @@ function SwapComponent() {
                   </span>
                   <span className="text-gray-400">
                     Balance:{" "}
-                    <span className="text-white">
+                    <span className="text-white inline-block max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap align-bottom">
                       {tokenBalances[toToken.symbol] || "0.000000"}
                     </span>{" "}
                     {toToken.symbol}
