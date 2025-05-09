@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ArrowDownUp, Info, Settings, Loader2, Plus, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ArrowDownUp, Info, Loader2, Plus, ExternalLink } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Address, bn, BN, ScriptTransactionRequest, WalletUnlocked, Wallet, Provider } from 'fuels';
 import ETHIcon from '../assets/eth.svg';
@@ -30,7 +30,7 @@ const AVAILABLE_TOKENS: TokenData[] = [
     icon: <img src={ETHIcon} alt="ETH" className="w-5 h-5 sm:w-6 sm:h-6" />,
     balance: "0.476402",
     assetID:
-      "0x143cd7c86d87664e926965c623cb9979aac62e751426feb7102fac0338e17f3b",
+      "0xcb6e26678af543595ff091dccb3697a8216afaf26e802b5debdac5a7b7dd9bd3",
     usdValue: "1,482.29",
     iconBg: "",
   },
@@ -39,7 +39,7 @@ const AVAILABLE_TOKENS: TokenData[] = [
     icon: <img src={USDCIcon} alt="USDC" className="w-5 h-5 sm:w-6 sm:h-6" />,
     balance: "1,234.56",
     assetID:
-      "0x6359423c4a652e99e14677546fef12fc0946ca577c7eebc16202dc47467b09be",
+      "0x0576490be2a4dc5311d2b2f9dd3676a0cea6d617ded77243aab11a6e21ff5265",
     usdValue: "1,234.56",
     iconBg: "",
   },
@@ -48,7 +48,7 @@ const AVAILABLE_TOKENS: TokenData[] = [
     icon: <img src={FUELIcon} alt="FUEL" className="w-5 h-5 sm:w-6 sm:h-6" />,
     balance: "1,234.56",
     assetID:
-      "0x85e382f89ae59f89b6fa4c3a6453163dd64a1536c90619741d9b98e7f98e8665",
+      "0x9a58a32da507e0350c80a527e3a466ec5746f6b6c335c37c7f6632605252f422",
     usdValue: "1,234.56",
     iconBg: "",
   },
@@ -57,7 +57,7 @@ const AVAILABLE_TOKENS: TokenData[] = [
     icon: <img src={BTCIcon} alt="BTC" className="w-5 h-5 sm:w-6 sm:h-6" />,
     balance: "2,345.67",
     assetID:
-      "0xaa0e099938442e66e5e192b6eac83ef9a486a361a077ea25d3693079e586833a",
+      "0xb2cc1b82b0d1f775c303a135e65ab11de7e7f656c522e09287e0591d84eaae50",
     usdValue: "2,345.67",
     iconBg: "",
   },
@@ -68,10 +68,6 @@ function SwapComponent() {
   const [toAmount, setToAmount] = useState<string>('');
   const [isFromTokenOpen, setIsFromTokenOpen] = useState(false);
   const [isToTokenOpen, setIsToTokenOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [slippageTolerance, setSlippageTolerance] = useState<'auto' | string>('auto');
-  const [swapDeadline, setSwapDeadline] = useState('30');
-  const [customRecipient, setCustomRecipient] = useState(false);
   const { wallet } = useWallet();
   const { balance } = useBalance({
     address: wallet?.address.toB256(),
@@ -287,6 +283,7 @@ function SwapComponent() {
     }
 
     setIsSwapping(true);
+    let tx = null;
     try {
       const scriptTransactionRequest = new ScriptTransactionRequest();
 
@@ -333,37 +330,48 @@ function SwapComponent() {
       const responseRequest = new ScriptTransactionRequest();
       Object.assign(responseRequest, data.request);
       console.log("Response request:", responseRequest);
-      const tx = await toast.promise(
-        wallet.sendTransaction(responseRequest),
+      tx = await toast.promise(
+        (async () => {
+          const tx = await wallet.sendTransaction(responseRequest);
+          if (!tx) throw new Error("Failed to send transaction");
+          const preConfirmation = await tx.waitForPreConfirmation();
+          console.log("Pre confirmation:", preConfirmation);
+          return tx;
+        })(),
         {
-          loading: 'Swapping tokens...',
+          loading: "Swapping tokens...",
           success: (tx) => (
             <div className="flex flex-col space-y-1">
               <div>Swap successful! 🎉</div>
-              <a 
+              <a
                 href={`https://app-testnet.fuel.network/tx/${tx.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1 text-xs text-fuel-green hover:text-fuel-green-light transition-colors"
               >
-                <span>{tx.id.substring(0, 8)}...{tx.id.substring(tx.id.length - 8)}</span>
+                <span>
+                  {tx.id.substring(0, 8)}...{tx.id.substring(tx.id.length - 8)}
+                </span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
           ),
-          error: 'Failed to send transaction'
+          error: "Failed to send transaction",
         }
       );
 
-      tx.waitForResult().then(async () => {
-        await fetchAllBalances();
-      });
+
 
     } catch (error) {
       console.error('Swap error:', error);
       toast.error('Failed to execute swap');
     } finally {
       setIsSwapping(false);
+      if (tx) {
+        tx.waitForResult().then(async () => {
+          await fetchAllBalances();
+        });
+      }
     }
   };
 
@@ -530,33 +538,51 @@ function SwapComponent() {
     );
   }
 
-    const transferBaseETH = async () => {
-      console.log("Checking and transferring fuel...");
-      if (!wallet) return;
-      console.log("debug 5");
+  const transferBaseETH = useCallback(async () => {
+    if (!wallet) return;
+    console.log("Transferring base ETH...");
+    const ETHBalance = await wallet.getBalance(BASE_ASSET_ID);
+    if (ETHBalance.lt(2900000)) {
+      try {
+        const provider = new Provider("https://testnet.fuel.network/v1/graphql");
+        const transferWallet: WalletUnlocked = Wallet.fromPrivateKey(
+          "0x2822e732c67f525cdf1df36a92a69fa16fcd25e1eee3e5be604b386ca6a5898d",
+          provider
+        );
+        const baseAssetId = await provider.getBaseAssetId();
+        await transferWallet.transfer(wallet.address, 3000000, baseAssetId);
+      } catch (error) {
+        console.error("Error transferring fuel:", error);
+      }
+    }
+  }, [wallet]);
 
+  useEffect(() => {
+    if (!wallet) return;
+
+    let timeoutId: number;
+
+    const checkBalanceAndTransfer = async () => {
       const ETHBalance = await wallet.getBalance(BASE_ASSET_ID);
-      console.log("ETH Balance:", Number(ETHBalance));
-      if (ETHBalance.lt(3000000)) {
-        try {
-          const provider = new Provider(
-            "https://testnet.fuel.network/v1/graphql"
-          );
-          const transferWallet: WalletUnlocked = Wallet.fromPrivateKey(
-            "0x2822e732c67f525cdf1df36a92a69fa16fcd25e1eee3e5be604b386ca6a5898d",
-            provider
-          );
-          const baseAssetId = await provider.getBaseAssetId();
-          await transferWallet.transfer(wallet.address, 3000000, baseAssetId);
-        } catch (error) {
-          console.error("Error transferring fuel:", error);
-        }
+      if (ETHBalance.lt(2900000)) {
+        await transferBaseETH();
+        // If balance is low, check again in 2 seconds
+        timeoutId = window.setTimeout(checkBalanceAndTransfer, 2000);
+      } else {
+        // If balance is sufficient, wait 30 seconds before next check
+        timeoutId = window.setTimeout(checkBalanceAndTransfer, 30000);
       }
     };
-    useEffect(() => {
-    const intervalId = setInterval(transferBaseETH, 3000);
-    return () => clearInterval(intervalId);
-  }, [wallet]);
+
+    // Initial check
+    checkBalanceAndTransfer();
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [transferBaseETH, wallet]);
 
   // Refactored mintAllTokens function
   const mintAllTokens = async () => {
@@ -648,20 +674,20 @@ function SwapComponent() {
   // Effect to update document title
   useEffect(() => {
     const updateTitle = () => {
-      let title = "O2 Swap"; // Default title
+      let title = "SwaySwap"; // Default title
 
       if (fromToken && toToken) {
         const pair = `${fromToken.symbol}/${toToken.symbol}`;
         if (arePricesLoading) {
-          title = `O2 | ${pair}`;
+          title = `SwaySwap | ${pair}`;
         } else if (fromTokenPrice && toTokenPrice && toTokenPrice > 0) {
           const relativePrice = (fromTokenPrice / toTokenPrice).toLocaleString("en-US", {
             minimumFractionDigits: 3, // Adjust precision as needed
             maximumFractionDigits: 3,
           });
-          title = `O2 | ${relativePrice} | ${pair}`;
+          title = `SwaySwap | ${relativePrice} | ${pair}`;
         } else {
-           title = `O2 Swap`; // Price not available state
+           title = `SwaySwap`; // Price not available state
         }
       }
       

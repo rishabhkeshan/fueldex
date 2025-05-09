@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import FuelLogo from "./assets/Fuel.svg";
+import { useState } from 'react';
+import FuelLogo from "./assets/Sway.svg";
 
 import SwapComponent from './components/SwapComponent';
 import DepositModal from './components/DepositModal';
@@ -23,9 +23,9 @@ function App() {
               <img
                 src={FuelLogo}
                 alt="FUEL Logo"
-                className="w-5 h-5 sm:w-7 sm:h-7 mt-1.5"
+                className="w-5 h-5 sm:w-6 sm:h-6"
               />
-              <span className="text-base sm:text-lg font-bold">O2</span>
+              <span className="text-base sm:text-lg font-bold">SwaySwap</span>
             </div>
             {/* <div className="flex items-center space-x-2 sm:space-x-4">
               <button
