@@ -6,7 +6,7 @@ import ETHIcon from '../assets/eth.svg';
 import FUELIcon from '../assets/fuelsymbol.svg';
 import BTCIcon from '../assets/solvBTC.webp';
 import USDCIcon from '../assets/usdc.svg';
-import { useWallet, useBalance, useIsConnected } from '@fuels/react';
+import { useWallet, useIsConnected } from '@fuels/react';
 import axios from 'axios';
 const BASE_ASSET_ID =
   "0xf8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07";
@@ -20,7 +20,6 @@ interface TokenData {
   assetID: string;
 }
 
-type SwapType = 'swap' | 'limit';
 const BASE_URL = "https://fuelstation-mainnet.xyz";
 // const BASE_URL = "http://localhost:3000";
 
@@ -69,20 +68,13 @@ function SwapComponent() {
   const [isFromTokenOpen, setIsFromTokenOpen] = useState(false);
   const [isToTokenOpen, setIsToTokenOpen] = useState(false);
   const { wallet } = useWallet();
-  const { balance } = useBalance({
-    address: wallet?.address.toB256(),
-    assetId: BASE_ASSET_ID,
-  });
+  // const { balance } = useBalance({
+  //   address: wallet?.address.toB256(),
+  //   assetId: BASE_ASSET_ID,
+  // });
   const [fromToken, setFromToken] = useState<TokenData>(AVAILABLE_TOKENS[0]);
 
   const [toToken, setToToken] = useState<TokenData>(AVAILABLE_TOKENS[1]);
-
-  const [activeSwapType, setActiveSwapType] = useState<SwapType>('swap');
-  const [limitPrice, setLimitPrice] = useState('');
-  const [expiryDays, setExpiryDays] = useState('7');
-  const [isExpiryOpen, setIsExpiryOpen] = useState(false);
-
-  const [enablePartialExecutions, setEnablePartialExecutions] = useState(false);
 
   const [arePricesLoading, setArePricesLoading] = useState(false);
   const [fromTokenPrice, setFromTokenPrice] = useState<number | null>(null);
@@ -347,7 +339,7 @@ function SwapComponent() {
                 href={`https://app-testnet.fuel.network/tx/${tx.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center space-x-1 text-xs text-fuel-green hover:text-fuel-green-light transition-colors"
+                className="flex items-center space-x-1 text-xs text-dex-green hover:text-dex-green transition-colors"
               >
                 <span>
                   {tx.id.substring(0, 8)}...{tx.id.substring(tx.id.length - 8)}
@@ -421,17 +413,17 @@ function SwapComponent() {
     return (
       <div
         ref={dropdownRef}
-        className="absolute top-full left-0 mt-2 w-[240px] bg-fuel-dark-800 rounded-xl shadow-lg border border-fuel-dark-600 z-50"
+        className="absolute top-full left-0 mt-2 w-[240px] bg-dex-sand rounded-xl shadow-lg border border-dex-aqua z-50"
       >
         <div className="p-3">
-          <div className="text-sm text-gray-400 mb-2">Select Token</div>
+          <div className="text-sm text-dex-dark mb-2">Select Token</div>
           <div className="space-y-1">
             {availableTokens.map((token) => (
               <button
                 key={token.symbol}
-                className={`w-full flex items-center space-x-3 p-2.5 rounded-lg hover:bg-fuel-dark-700 transition-colors ${
-                  selectedToken.symbol === token.symbol ? 'bg-fuel-dark-700' : ''
-                }`}
+                className={`w-full flex items-center space-x-3 p-2.5 rounded-lg transition-colors
+                  hover:bg-dex-aqua/30
+                  ${selectedToken.symbol === token.symbol ? 'bg-dex-aqua/50' : ''}`}
                 onClick={() => {
                   onSelect(token);
                   onClose();
@@ -441,13 +433,13 @@ function SwapComponent() {
                   {token.icon}
                 </div>
                 <div className="flex flex-col items-start flex-1 min-w-0">
-                  <span className="text-sm font-medium">{token.symbol}</span>
-                  <span className="text-xs text-gray-400 whitespace-nowrap">
+                  <span className="text-sm font-medium text-dex-dark">{token.symbol}</span>
+                  <span className="text-xs text-dex-dark whitespace-nowrap">
                     Balance: <span className="inline-block max-w-[100px] overflow-hidden text-ellipsis align-bottom">{tokenBalances[token.symbol] || "0.000000"}</span>
                   </span>
                 </div>
                 {selectedToken.symbol === token.symbol && (
-                  <div className="w-2 h-2 rounded-full bg-fuel-green"></div>
+                  <div className="w-2 h-2 rounded-full bg-dex-coral"></div>
                 )}
               </button>
             ))}
@@ -500,19 +492,17 @@ function SwapComponent() {
     return (
       <div
         ref={dropdownRef}
-        className="absolute top-full left-0 mt-2 w-[240px] bg-fuel-dark-800 rounded-xl shadow-lg border border-fuel-dark-600 z-50"
+        className="absolute top-full left-0 mt-2 w-[240px] bg-dex-sand rounded-xl shadow-lg border border-dex-aqua z-50"
       >
         <div className="p-3">
-          <div className="text-sm text-gray-400 mb-2">Select Token</div>
+          <div className="text-sm text-dex-dark mb-2">Select Token</div>
           <div className="space-y-1">
             {availableTokens.map((token) => (
               <button
                 key={token.symbol}
-                className={`w-full flex items-center space-x-3 p-2.5 rounded-lg hover:bg-fuel-dark-700 transition-colors ${
-                  selectedToken.symbol === token.symbol
-                    ? "bg-fuel-dark-700"
-                    : ""
-                }`}
+                className={`w-full flex items-center space-x-3 p-2.5 rounded-lg transition-colors
+                  hover:bg-dex-aqua/30
+                  ${selectedToken.symbol === token.symbol ? 'bg-dex-aqua/50' : ''}`}
                 onClick={() => {
                   onSelect(token);
                   onClose();
@@ -522,13 +512,13 @@ function SwapComponent() {
                   {token.icon}
                 </div>
                 <div className="flex flex-col items-start flex-1 min-w-0">
-                  <span className="text-sm font-medium">{token.symbol}</span>
-                  <span className="text-xs text-gray-400 whitespace-nowrap">
+                  <span className="text-sm font-medium text-dex-dark">{token.symbol}</span>
+                  <span className="text-xs text-dex-dark whitespace-nowrap">
                     Balance: <span className="inline-block max-w-[100px] overflow-hidden text-ellipsis align-bottom">{tokenBalances[token.symbol] || "0.000000"}</span>
                   </span>
                 </div>
                 {selectedToken.symbol === token.symbol && (
-                  <div className="w-2 h-2 rounded-full bg-fuel-green"></div>
+                  <div className="w-2 h-2 rounded-full bg-dex-coral"></div>
                 )}
               </button>
             ))}
@@ -704,15 +694,15 @@ function SwapComponent() {
   }, [fromToken, toToken, fromTokenPrice, toTokenPrice, arePricesLoading]); // Dependencies
 
   return (
-    <div className="min-h-screen bg-fuel-dark-800 py-1 sm:py-16 overflow-y-auto relative">
+    <div className="min-h-screen bg-dex-sand py-1 sm:py-16 overflow-y-auto relative">
       {isMinting && (
-        <div className="fixed inset-0 bg-fuel-dark-900/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-fuel-dark-800 rounded-xl p-6 max-w-sm mx-4 text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-fuel-green" />
+        <div className="fixed inset-0 bg-dex-sand/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-dex-sand rounded-xl p-6 max-w-sm mx-4 text-center">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-dex-coral" />
             <h3 className="text-lg font-medium mb-2">
               Initializing Your Wallet
             </h3>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-dex-dark">
               Please wait while we mint your test tokens. This may take a few
               moments...
             </p>
@@ -723,44 +713,43 @@ function SwapComponent() {
       <div className="w-full max-w-[420px] mx-auto px-2 mb-8 mt-4 sm:mt-0">
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-dex-dark">
               Mint assets for testing
             </span>
-            <span className="text-xs text-gray-500">Testnet only</span>
+            <span className="text-xs text-dex-dark">Testnet only</span>
           </div>
           <div className="grid grid-cols-4 gap-1 sm:gap-2">
             {AVAILABLE_TOKENS.map((token) => (
               <button
                 key={token.symbol}
-                className="flex items-center justify-center space-x-0.5 sm:space-x-1 bg-fuel-dark-700 hover:bg-fuel-dark-600 px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-lg transition-colors group"
+                className="flex items-center justify-center space-x-0.5 sm:space-x-1 bg-dex-lightSand hover:bg-dex-aqua/30 px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-lg transition-colors group"
                 onClick={() => mint(token)}
               >
-                <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-fuel-green group-hover:rotate-180 transition-transform duration-200" />
+                <Plus className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-dex-coral group-hover:rotate-180 transition-transform duration-200" />
                 <span className="text-xs sm:text-sm">{token.symbol}</span>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="bg-fuel-dark-800 rounded-xl p-3 sm:p-4 shadow-lg border border-fuel-dark-600">
-          {activeSwapType === "swap" ? (
+        <div className="bg-dex-aqua rounded-xl p-3 sm:p-4 shadow-lg border border-dex-aqua">
             <>
-              <div className="space-y-2">
+              <div className="space-y-2 mb-3">
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-400 font-medium">From</span>
-                  <span className="text-gray-400">
+                  <span className="text-dex-dark font-medium">From</span>
+                  <span className="text-dex-dark">
                     Balance:{" "}
-                    <span className="text-white inline-block max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap align-bottom"> 
+                    <span className="text-dex-dark inline-block max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap align-bottom"> 
                       {tokenBalances[fromToken.symbol] || "0.000000"}
                     </span>{" "}
                     {fromToken.symbol}
                   </span>
                 </div>
-                <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
+                <div className="flex items-center space-x-2 bg-dex-sand p-2 rounded-xl">
                   <div className="relative">
                     <button
                       ref={fromTokenTriggerRef}
-                      className="flex items-center space-x-1.5 px-1 sm:px-1.5 py-0.5 sm:py-1 rounded-lg hover:bg-fuel-dark-600 min-w-[80px] sm:min-w-[90px]"
+                      className="flex items-center space-x-1.5 px-1 sm:px-1.5 py-0.5 sm:py-1 rounded-lg hover:bg-dex-aqua/30 min-w-[80px] sm:min-w-[90px]"
                       onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
                     >
                       <div className="flex items-center justify-center">
@@ -769,7 +758,7 @@ function SwapComponent() {
                       <span className="text-xs sm:text-sm">
                         {fromToken.symbol}
                       </span>
-                      <span className="text-gray-400">▼</span>
+                      <span className="text-dex-dark">▼</span>
                     </button>
                     <TokenDropdown
                       isOpen={isFromTokenOpen}
@@ -782,7 +771,7 @@ function SwapComponent() {
                   </div>
                   <input
                     type="text"
-                    className="flex-1 bg-transparent text-xl sm:text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
+                    className="flex-1 bg-transparent text-xl sm:text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-dex-dark"
                     placeholder="0.00"
                     value={fromAmount}
                     onChange={async (e) => {
@@ -803,34 +792,33 @@ function SwapComponent() {
                     }}
                   />
                 </div>
-                <div className="text-right text-xs text-gray-400">
-                </div>
+
               </div>
 
               <div className="flex justify-center relative z-10 mb-1">
                 <button
-                  className="p-2 rounded-xl bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-all duration-200 border-4 border-fuel-dark-800 shadow-lg group"
+                  className="p-2 rounded-xl bg-dex-lightSand hover:bg-dex-aqua/30 transition-all duration-200 border-4 border-dex-sand shadow-lg group"
                   onClick={handleSwapTokens}
                 >
-                  <ArrowDownUp className="w-5 h-5 text-fuel-green group-hover:rotate-180 transition-transform duration-200" />
+                  <ArrowDownUp className="w-4 h-4 text-dex-coral group-hover:rotate-180 transition-transform duration-200" />
                 </button>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 mt-3">
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-400 font-medium">To</span>
-                  <span className="text-gray-400">
-                    Balance:{" "}
-                    <span className="text-white inline-block max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap align-bottom"> 
+                  <span className="text-dex-dark font-medium">To</span>
+                  <span className="text-dex-dark">
+                    Balance: {" "}
+                    <span className="text-dex-dark inline-block max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap align-bottom">
                       {tokenBalances[toToken.symbol] || "0.000000"}
                     </span>{" "}
                     {toToken.symbol}
                   </span>
                 </div>
-                <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
+                <div className="flex items-center space-x-2 bg-dex-sand p-2 rounded-xl">
                   <div className="relative">
                     <button
                       ref={toTokenTriggerRef}
-                      className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
+                      className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-dex-aqua/30 min-w-[100px] sm:min-w-[120px]"
                       onClick={() => setIsToTokenOpen(!isToTokenOpen)}
                     >
                       <div className="flex items-center justify-center">
@@ -839,7 +827,7 @@ function SwapComponent() {
                       <span className="text-sm sm:text-base">
                         {toToken.symbol}
                       </span>
-                      <span className="text-gray-400">▼</span>
+                      <span className="text-dex-dark">▼</span>
                     </button>
                     <TempTokenDropdown
                       isOpen={isToTokenOpen}
@@ -851,7 +839,7 @@ function SwapComponent() {
                   </div>
                   <input
                     type="text"
-                    className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
+                    className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-dex-dark"
                     placeholder="0.00"
                     value={toAmount}
                     onChange={async (e) => {
@@ -872,207 +860,14 @@ function SwapComponent() {
                     }}
                   />
                 </div>
-                {/* <div className="text-right text-xs text-gray-400">
-                  ≈ $<span className="text-white">{toToken.usdValue}</span>
-                </div> */}
               </div>
             </>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-400 font-medium">Sell amount</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-gray-400">
-                      Balance:{" "}
-                      <span className="text-white inline-block max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap align-bottom">
-                        {tokenBalances[fromToken.symbol] || "0.000000"}
-                      </span>{" "}
-                      {fromToken.symbol}
-                    </span>
-                    <button className="text-xs text-fuel-green hover:text-fuel-green-light">
-                      MAX
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
-                  <div className="relative">
-                    <button
-                      className="flex items-center space-x-1.5 px-1.5 py-1 rounded-lg hover:bg-fuel-dark-600 min-w-[90px] sm:min-w-[110px]"
-                      onClick={() => setIsFromTokenOpen(!isFromTokenOpen)}
-                    >
-                      <div className="flex items-center justify-center">
-                        {fromToken.icon}
-                      </div>
-                      <span className="text-sm sm:text-base">
-                        {fromToken.symbol}
-                      </span>
-                      <span className="text-gray-400">▼</span>
-                    </button>
-                    <TokenDropdown
-                      isOpen={isFromTokenOpen}
-                      onClose={() => setIsFromTokenOpen(false)}
-                      onSelect={setFromToken}
-                      selectedToken={fromToken}
-                      excludeToken={toToken.symbol}
-                      triggerRef={fromTokenTriggerRef}
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
-                    placeholder="0.00"
-                    value={fromAmount}
-                    onChange={async (e) => {
-                      const value = e.target.value;
-                      const numericValue = parseFloat(value);
-                      setFromAmount(value);
-
-                      if (!isNaN(numericValue) && numericValue > 0 && fromTokenPrice && toTokenPrice && fromTokenPrice > 0) {
-                        const calculatedAmount = (
-                          numericValue * (fromTokenPrice / toTokenPrice)
-                        ).toFixed(6);
-                        setToAmount(calculatedAmount);
-                      } else if (value === '' || numericValue === 0) {
-                        setToAmount("");
-                      } else if (!fromTokenPrice || !toTokenPrice) {
-                        await fetchTokenPrices(fromToken.symbol, toToken.symbol);
-                      }
-                    }}
-                  />
-                </div>
-                <div className="text-right text-xs text-gray-400">
-                  ≈ $<span className="text-white">{fromToken.usdValue}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 mt-4">
-                <div className="col-span-2">
-                  <div className="text-xs text-gray-400 mb-1">
-                    Limit price <span className="text-green-400">(+0.1%)</span>
-                  </div>
-                  <div className="flex items-center bg-fuel-dark-700 p-2 rounded-xl">
-                    <input
-                      type="text"
-                      className="flex-1 bg-transparent text-sm font-medium focus:outline-none min-w-0"
-                      placeholder="0.000000"
-                      value={limitPrice}
-                      onChange={(e) => setLimitPrice(e.target.value)}
-                    />
-                    <span className="text-sm text-gray-400 px-2">
-                      {toToken.symbol}
-                    </span>
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-400 mb-1">Expiry</div>
-                  <div className="relative">
-                    <button
-                      className="w-full bg-fuel-dark-700 p-2 rounded-xl text-left flex items-center justify-between text-sm"
-                      onClick={() => setIsExpiryOpen(!isExpiryOpen)}
-                    >
-                      <span>{expiryDays} Days</span>
-                      <span className="text-gray-400">▼</span>
-                    </button>
-                    {isExpiryOpen && (
-                      <div className="absolute top-full left-0 w-full mt-1 bg-fuel-dark-700 rounded-xl shadow-lg z-10">
-                        {["1", "7", "30"].map((days) => (
-                          <button
-                            key={days}
-                            className="w-full p-2 text-left hover:bg-fuel-dark-600 text-sm"
-                            onClick={() => {
-                              setExpiryDays(days);
-                              setIsExpiryOpen(false);
-                            }}
-                          >
-                            {days} Days
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-center my-4">
-                <button
-                  className="p-2 rounded-xl bg-fuel-dark-700 hover:bg-fuel-dark-600 transition-all duration-200 border-4 border-fuel-dark-800 shadow-lg group"
-                  onClick={handleSwapTokens}
-                >
-                  <ArrowDownUp className="w-5 h-5 text-fuel-green group-hover:rotate-180 transition-transform duration-200" />
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gray-400 font-medium">
-                    Receive at least
-                  </span>
-                  <span className="text-gray-400">
-                    Balance:{" "}
-                    <span className="text-white inline-block max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap align-bottom">
-                      {tokenBalances[toToken.symbol] || "0.000000"}
-                    </span>{" "}
-                    {toToken.symbol}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2 bg-fuel-dark-700 p-2 rounded-xl">
-                  <div className="relative">
-                    <button
-                      className="flex items-center space-x-2 px-2 py-1.5 rounded-lg hover:bg-fuel-dark-600 min-w-[100px] sm:min-w-[120px]"
-                      onClick={() => setIsToTokenOpen(!isToTokenOpen)}
-                    >
-                      <div className="flex items-center justify-center">
-                        {toToken.icon}
-                      </div>
-                      <span className="text-sm sm:text-base">
-                        {toToken.symbol}
-                      </span>
-                      <span className="text-gray-400">▼</span>
-                    </button>
-                    <TokenDropdown
-                      isOpen={isToTokenOpen}
-                      onClose={() => setIsToTokenOpen(false)}
-                      onSelect={setToToken}
-                      selectedToken={toToken}
-                      excludeToken={fromToken.symbol}
-                      triggerRef={toTokenTriggerRef}
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    className="flex-1 bg-transparent text-2xl font-medium focus:outline-none text-right min-w-0 overflow-hidden text-ellipsis placeholder-gray-500"
-                    placeholder="0.00"
-                    value={toAmount}
-                    onChange={async (e) => {
-                      const value = e.target.value;
-                      const numericValue = parseFloat(value);
-                      setToAmount(value);
-
-                      if (!isNaN(numericValue) && numericValue > 0 && fromTokenPrice && toTokenPrice && fromTokenPrice > 0) {
-                        const calculatedAmount = (
-                          numericValue * (toTokenPrice / fromTokenPrice)
-                        ).toFixed(6);
-                        setFromAmount(calculatedAmount);
-                      } else if (value === '' || numericValue === 0) {
-                        setFromAmount("");
-                      } else if (!fromTokenPrice || !toTokenPrice) {
-                        await fetchTokenPrices(fromToken.symbol, toToken.symbol);
-                      }
-                    }}
-                  />
-                </div>
-                <div className="text-right text-xs text-gray-400">
-                  ≈ $<span className="text-white">{toToken.usdValue}</span>
-                </div>
-              </div>
-            </>
-          )}
+          
 
           <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-fuel-dark-700/50 backdrop-blur-sm">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-dex-lightSand/50 backdrop-blur-sm">
               <div className="flex items-center space-x-2">
-                <span className="text-xs sm:text-sm text-gray-400">
+                <span className="text-xs sm:text-sm text-dex-dark">
                   1 {fromToken.symbol} ={" "}
                   {arePricesLoading
                     ? "..."
@@ -1084,13 +879,13 @@ function SwapComponent() {
                     : "N/A"}{" "}
                   {toToken.symbol}
                   {priceFetchError && (
-                    <span className="text-red-500 ml-2 text-xs">Error</span>
+                    <span className="text-dex-coral ml-2 text-xs">Error</span>
                   )}
                 </span>
-                <Info className="w-4 h-4 text-gray-500" />
+                <Info className="w-4 h-4 text-dex-dark" />
               </div>
               <button
-                className="flex items-center space-x-1 text-fuel-green hover:text-fuel-green-light transition-colors"
+                className="flex items-center space-x-1 text-dex-coral transition-colors"
                 onClick={handlePriceRefresh}
                 disabled={arePricesLoading}
               >
@@ -1102,39 +897,22 @@ function SwapComponent() {
               </button>
             </div>
 
-            <div className="p-2.5 rounded-xl bg-fuel-dark-700/50 backdrop-blur-sm space-y-2">
+            <div className="p-2.5 rounded-xl bg-dex-lightSand/50 backdrop-blur-sm space-y-2">
               <div className="flex justify-between text-xs sm:text-sm">
-                <span className="text-gray-400">Network costs (est.)</span>
+                <span className="text-dex-dark">Network costs (est.)</span>
                 <span className="font-medium">
-                  0.00013 ETH <span className="text-gray-400">(≈ $0.0038)</span>
+                  0.00013 ETH <span className="text-dex-dark">(≈ $0.0038)</span>
                 </span>
               </div>
-              {activeSwapType === "swap" ? (
-                <></>
-              ) : (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Order expiration</span>
-                    <span className="font-medium">{expiryDays} days</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Partial fills</span>
-                    <span className="font-medium">
-                      {enablePartialExecutions ? "Enabled" : "Disabled"}
-                    </span>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>
 
         <div className="mt-4">
-          {activeSwapType === "swap" ? (
             <button
               onClick={handleSwap}
               disabled={isSwapping}
-              className="w-full py-2.5 sm:py-3 bg-fuel-green text-fuel-dark-900 rounded-lg font-medium hover:bg-opacity-90 transition-colors text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 sm:py-4 bg-gradient-to-r from-dex-coral to-dex-aqua text-white font-bold text-sm sm:text-base rounded-xl transition-all duration-200 hover:brightness-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSwapping ? (
                 <div className="flex items-center justify-center space-x-2">
@@ -1145,11 +923,6 @@ function SwapComponent() {
                 "Place Order"
               )}
             </button>
-          ) : (
-            <button className="w-full py-3.5 bg-fuel-green text-fuel-dark-900 rounded-xl font-medium hover:bg-opacity-90 transition-colors text-base">
-              Place Order
-            </button>
-          )}
         </div>
       </div>
     </div>

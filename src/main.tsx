@@ -107,26 +107,27 @@ createRoot(document.getElementById("root")!).render(
                 position:
                   window.innerWidth <= 768 ? "top-center" : "bottom-center",
                 style: {
-                  background: "#141414", // fuel-dark-800
-                  color: "#fff",
-                  border: "1px solid #27272A", // fuel-dark-600
+                  background: "#FCE5B2", // dex-sand
+                  color: "#2B4A3D", // dex-dark
+                  border: "1px solid #F89B82", // dex-aqua
+                  fontWeight: "600",
                 },
                 success: {
                   iconTheme: {
-                    primary: "#00F58C", // fuel-green
-                    secondary: "#141414", // fuel-dark-800
+                    primary: "#F89B82", // dex-coral
+                    secondary: "#FCE5B2", // dex-sand
                   },
                 },
                 error: {
                   iconTheme: {
-                    primary: "#EF4444", // red-500
-                    secondary: "#141414", // fuel-dark-800
+                    primary: "#F89B82", // dex-coral
+                    secondary: "#2B4A3D", // dex-dark
                   },
                 },
                 loading: {
                   iconTheme: {
-                    primary: "#00F58C", // fuel-green
-                    secondary: "#141414", // fuel-dark-800
+                    primary: "#5FE3D6", // dex-aqua
+                    secondary: "#FCE5B2", // dex-sand
                   },
                 },
                 duration: 4000,

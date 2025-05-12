@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Wallet, LogOut } from "lucide-react";
 import { useConnectUI, useDisconnect, useWallet } from "@fuels/react";
 import { toast } from "react-hot-toast";
@@ -40,8 +40,8 @@ function WalletConnect({ variant = 'header', tradeType = 'buy', tokenSymbol = 'F
         onClick={() => !isConnected && connect()}
         className={`w-full py-2.5 rounded text-sm font-medium transition-colors
           ${tradeType === 'buy' 
-            ? 'bg-fuel-green text-fuel-dark-900 hover:bg-opacity-90' 
-            : 'bg-red-500 text-white hover:bg-opacity-90'}`}
+            ? 'bg-dex-blue text-dex-white hover:bg-dex-teal' 
+            : 'bg-dex-orange text-dex-white hover:bg-dex-brown'}`}
       >
         {isConnected 
           ? `${tradeType.toUpperCase()} ${tokenSymbol}` 
@@ -55,29 +55,31 @@ function WalletConnect({ variant = 'header', tradeType = 'buy', tokenSymbol = 'F
       {!isConnected ? (
         <button
           onClick={() => connect()}
-          className="flex items-center space-x-2 bg-fuel-green text-fuel-dark-900 px-4 py-1.5 rounded text-sm font-medium hover:bg-opacity-90 transition-colors"
+          className="bg-dex-coral text-dex-white rounded-full px-8 py-2 text-base font-medium hover:opacity-90 transition-colors"
         >
-          <Wallet className="w-4 h-4" />
-          <span>{isConnecting ? "Connecting" : "Connect"}</span>
+          <span className="flex items-center justify-center space-x-2 font-bold">
+            <Wallet className="w-4 h-4" />
+            <span>{isConnecting ? "Connecting" : "Connect Wallet"}</span>
+          </span>
         </button>
       ) : (
-        <div className="flex items-center space-x-2 bg-fuel-dark-700 px-4 py-1.5 rounded">
+        <div className="flex items-center space-x-2 bg-dex-coral px-4 py-1.5 rounded-full border border-dex-coral">
           <div
             onClick={handleCopyAddress}
-            className="flex items-center space-x-2 text-sm cursor-pointer"
+            className="flex items-center space-x-2 text-base cursor-pointer"
             title="Copy address"
           >
-            <Wallet className="w-4 h-4 text-fuel-green" />
-            <span className="text-gray-100">
+            <Wallet className="w-4 h-4 text-dex-white" />
+            <span className="font-bold text-dex-white">
               {address.substring(0, 6)}...{address.substring(address.length - 4)}
             </span>
           </div>
           <button
             onClick={() => disconnect()}
-            className="ml-2 p-1 hover:bg-fuel-dark-600 rounded-full transition-colors"
+            className="ml-2 p-1 rounded-full transition-colors"
             title="Disconnect wallet"
           >
-            <LogOut className="w-4 h-4 text-gray-400 hover:text-gray-300" />
+            <LogOut className="w-4 h-4 text-white" />
           </button>
         </div>
       )}

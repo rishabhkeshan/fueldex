@@ -18,6 +18,21 @@ export default {
             700: '#1A1A1A',
             600: '#222222'
           }
+        },
+        dex: {
+          sand: '#FCE5B2', // sand background
+          lightSand: '#F9E7C2', // input bg
+          aqua: '#5FE3D6', // main card/bg
+          coral: '#F89B82', // button/accent
+          dark: '#2B4A3D', // main text
+          sky: '#AEEAFD',  // sky blue
+          blue: '#4FC3F7', // accent blue
+          teal: '#3DDAD7', // accent teal
+          orange: '#FFA726', // accent orange
+          brown: '#B57B4A', // palm trunk
+          green: '#3CB371', // palm leaves
+          white: '#FFF',
+          black: '#222',
         }
       },
     },
