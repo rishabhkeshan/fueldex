@@ -2,7 +2,6 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import "@rainbow-me/rainbowkit/styles.css";
 import { FuelProvider } from "@fuels/react";
 import {
   BakoSafeConnector,
@@ -12,11 +11,10 @@ import {
   SolanaConnector,
   WalletConnectConnector,
   BurnerWalletConnector,
-} from "@fuels/connectors";import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+} from "@fuels/connectors";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import { arbitrum, base, mainnet, optimism, sepolia } from "wagmi/chains";
-import { RainbowKitProvider } from "@rainbow-me/rainbowkit";
+import { sepolia } from "wagmi/chains";
 import { CHAIN_IDS, Provider } from "fuels";
 import { createConfig, http, injected } from "@wagmi/core";
 import { walletConnect } from "@wagmi/connectors";
@@ -79,16 +77,11 @@ const FUEL_CONFIG = createFuelConfig(() => {
   };
 });
 
-const config = getDefaultConfig({
-  appName: "Fuel Order Book",
-  projectId: "YOUR_PROJECT_ID",
-  chains: [mainnet, optimism, arbitrum, base],
-});
+
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <FuelProvider
           theme="dark"
@@ -100,42 +93,39 @@ createRoot(document.getElementById("root")!).render(
           ]}
           fuelConfig={FUEL_CONFIG}
         >
-          <RainbowKitProvider>
             <App />
             <Toaster
               toastOptions={{
                 position:
                   window.innerWidth <= 768 ? "top-center" : "bottom-center",
                 style: {
-                  background: "#FCE5B2", // dex-sand
-                  color: "#2B4A3D", // dex-dark
-                  border: "1px solid #F89B82", // dex-aqua
+                  background: "#F5F6E7",
+                  color: "#181A22",
+                  border: "1px solid #181A22",
                   fontWeight: "600",
                 },
                 success: {
                   iconTheme: {
-                    primary: "#F89B82", // dex-coral
-                    secondary: "#FCE5B2", // dex-sand
+                    primary: "#181A22",
+                    secondary: "#fff",
                   },
                 },
                 error: {
                   iconTheme: {
-                    primary: "#F89B82", // dex-coral
-                    secondary: "#2B4A3D", // dex-dark
+                    primary: "#181A22",
+                    secondary: "#fff",
                   },
                 },
                 loading: {
                   iconTheme: {
-                    primary: "#5FE3D6", // dex-aqua
-                    secondary: "#FCE5B2", // dex-sand
+                    primary: "#181A22",
+                    secondary: "#fff",
                   },
                 },
                 duration: 4000,
               }}
             />
-          </RainbowKitProvider>
         </FuelProvider>
       </QueryClientProvider>
-    </WagmiProvider>
   </StrictMode>
 );
