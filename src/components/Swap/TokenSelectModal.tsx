@@ -7,21 +7,29 @@ interface TokenSelectModalProps {
   onClose: () => void;
   tokens: TokenData[];
   onSelect: (token: TokenData) => void;
+  excludeToken?: string;
 }
 
-const TokenSelectModal: React.FC<TokenSelectModalProps> = ({ open, onClose, tokens, onSelect }) => {
+const TokenSelectModal: React.FC<TokenSelectModalProps> = ({ open, onClose, tokens, onSelect, excludeToken }) => {
   const [search, setSearch] = React.useState('');
 
   if (!open) return null;
 
   const filteredTokens = tokens.filter(token =>
-    token.symbol.toLowerCase().includes(search.toLowerCase()) ||
-    token.name.toLowerCase().includes(search.toLowerCase())
+    (excludeToken ? token.symbol !== excludeToken : true) &&
+    (token.symbol.toLowerCase().includes(search.toLowerCase()) ||
+      token.name.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 backdrop-blur-sm">
-      <div className="relative bg-[#F5F6E7] rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-[#F5F6E7] rounded-2xl shadow-xl w-full max-w-md mx-4 p-6"
+        onClick={e => e.stopPropagation()}
+      >
         {/* Close button */}
         <button
           className="absolute top-4 right-4 text-2xl text-[#181A22] hover:opacity-70"

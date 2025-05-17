@@ -1,5 +1,4 @@
 import React from 'react';
-
 interface SwapInputRowProps {
   tokenLabel?: string;
   tokenIcon?: string;
@@ -44,22 +43,43 @@ const SwapInputRow: React.FC<SwapInputRowProps> = ({
       <button
         type="button"
         onClick={onTokenClick}
-        className="flex items-center text-[#181A22] text-base sm:text-lg font-medium focus:outline-none truncate"
+        className="flex items-center text-[#181A22] text-base sm:text-lg font-medium focus:outline-none truncate flex-shrink-0"
       >
         {tokenLabel ? (
           <>
-            {tokenIcon && <img src={tokenIcon} alt={tokenLabel} className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />}
+            {tokenIcon && (
+              <img
+                src={tokenIcon}
+                alt={tokenLabel}
+                className="w-5 h-5 sm:w-6 sm:h-6 mr-2"
+              />
+            )}
             <span>{tokenLabel}</span>
           </>
         ) : (
-          <span className="text-[#A1A1AA] font-normal">{placeholder || 'Choose coin'}</span>
+          <span className="text-[#A1A1AA] font-normal">
+            {placeholder || "Choose coin"}
+          </span>
         )}
-        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" className="ml-2">
-          <path d="M7 10l5 5 5-5" stroke="#181A22" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        {/* Divider and dropdown icon inside button */}
+        <svg
+          width="20"
+          height="20"
+          fill="none"
+          viewBox="0 0 24 24"
+          className="ml-2"
+        >
+          <path
+            d="M7 10l5 5 5-5"
+            stroke="#181A22"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>{" "}
       </button>
-      {/* Divider */}
       <div className="mx-2 h-6 border-l border-[#181A22]/30" />
+
       {/* Editable Amount */}
       <input
         type="text"
@@ -68,7 +88,7 @@ const SwapInputRow: React.FC<SwapInputRowProps> = ({
         value={amount}
         onChange={handleAmountChange}
         placeholder="0.00"
-        className="ml-auto text-[#181A22] text-base sm:text-xl font-medium tabular-nums text-right bg-transparent border-none outline-none w-full placeholder-[#A1A1AA]"
+        className="ml-auto flex-1 text-[#181A22] text-base sm:text-xl font-medium tabular-nums text-right bg-transparent border-none outline-none placeholder-[#A1A1AA]"
       />
     </div>
   );

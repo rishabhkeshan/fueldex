@@ -10,7 +10,8 @@ import { executeSwap } from '../../utils/swap.tsx';
 import { AVAILABLE_TOKENS, TokenData, BASE_ETH_TOKEN } from '../../utils/constants';
 import TransactionModal from './TransactionModal';
 import FaucetModal from './FaucetModal';
-import type { Coin } from "fuels";
+import { type Coin } from "fuels";
+import SwapSummary from './SwapSummary';
 
 const SwapForm: React.FC = () => {
   const { wallet } = useWallet();
@@ -21,6 +22,7 @@ const SwapForm: React.FC = () => {
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [txModalStatus, setTxModalStatus] = useState<'pending' | 'success'>('pending');
   const [txHash, setTxHash] = useState<string | undefined>(undefined);
+  const [feeOpen, setFeeOpen] = useState(false);
 
   const ethCoinsRef = useRef<Coin[]>([]);
   const btcCoinsRef = useRef<Coin[]>([]);
@@ -41,6 +43,10 @@ const SwapForm: React.FC = () => {
     setIsSwapping,
     handleSwapTokens,
     setMaxAmount,
+    fromTokenPrice,
+    toTokenPrice,
+    arePricesLoading,
+    priceFetchError,
   } = useTokenSwap();
 
   // Balances
@@ -164,6 +170,18 @@ const SwapForm: React.FC = () => {
     setTokenSelectType(null);
   };
 
+  // Price display logic (like SwapComponentRefactored)
+  let priceDisplay = 'N/A';
+  if (arePricesLoading) {
+    priceDisplay = '...';
+  } else if (fromTokenPrice && toTokenPrice && toTokenPrice > 0) {
+    priceDisplay = (fromTokenPrice / toTokenPrice).toLocaleString('en-US', {
+      minimumFractionDigits: 6,
+      maximumFractionDigits: 6,
+    });
+  }
+  const totalFee = '$0.38'; // TODO: get real fee
+
   return (
     <>
       <FaucetModal open={isMinting} />
@@ -177,6 +195,9 @@ const SwapForm: React.FC = () => {
           }}
           tokens={AVAILABLE_TOKENS}
           onSelect={handleTokenSelect}
+          excludeToken={
+            modalOpen === "from" ? toToken.symbol : fromToken.symbol
+          }
         />
         <div className="flex flex-col gap-2 sm:gap-4">
           {/* From label and balance */}
@@ -187,7 +208,9 @@ const SwapForm: React.FC = () => {
               <span
                 className="ml-1 underline cursor-pointer text-[#181A22] font-semibold"
                 onClick={() => {
-                  const maxAmount = (tokenBalances[fromToken.symbol] || "0.000000").replace(/,/g, "");
+                  const maxAmount = (
+                    tokenBalances[fromToken.symbol] || "0.000000"
+                  ).replace(/,/g, "");
                   setMaxAmount(maxAmount);
                 }}
               >
@@ -256,16 +279,103 @@ const SwapForm: React.FC = () => {
         <button
           type="button"
           className={`w-full ${
-            isConnected && parseFloat(fromAmount) > 0 ? "bg-[#181A22]" : "bg-[#A1A1AA]"
+            isConnected && parseFloat(fromAmount) > 0
+              ? "bg-[#181A22]"
+              : "bg-[#A1A1AA]"
           } text-white rounded-lg py-3 sm:py-4 font-bold text-base sm:text-lg mt-4 cursor-pointer disabled:cursor-not-allowed`}
           disabled={isSwapping || !wallet || parseFloat(fromAmount) <= 0}
           onClick={handleSwap}
         >
-          {isSwapping ? "Swapping..." : parseFloat(fromAmount) > 0 ? "Place Order" : "Enter an Amount"}
+          {isSwapping
+            ? "Swapping..."
+            : parseFloat(fromAmount) > 0
+            ? "Place Order"
+            : "Enter an Amount"}
         </button>
         <div className="text-center text-xs sm:text-sm text-[#A1A1AA] mt-2">
           {wallet ? "" : "Connect your wallet to proceed"}
         </div>
+        {/* Price info row: always visible */}
+        <div className="w-full flex items-center justify-between px-1">
+          <div className="text-[#A1A1AA] text-xs font-medium flex items-center">
+            1 {fromToken.symbol} ={" "}
+            {arePricesLoading ? (
+              <svg
+                className="inline w-4 h-4 animate-spin mx-1 text-[#181A1A]"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="#181A22"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="#181A22"
+                  d="M4 12a8 8 0 018-8v8z"
+                />
+              </svg>
+            ) : (
+              <>
+                {priceDisplay} {toToken.symbol}
+              </>
+            )}
+            {priceFetchError && (
+              <span className="text-[#E74C3C] ml-2 text-xs">Error</span>
+            )}
+          </div>
+          {/* Fee summary and dropdown: only if amount is valid */}
+          {((fromAmount && !isNaN(Number(fromAmount)) && Number(fromAmount) > 0) ||
+            (toAmount && !isNaN(Number(toAmount)) && Number(toAmount) > 0)) && (
+            <button
+              type="button"
+              className="flex items-center text-[#A1A1AA] text-xs font-medium hover:opacity-80"
+              onClick={() => setFeeOpen((o) => !o)}
+            >
+              <svg
+                className="w-5 h-5 mr-1 -mt-1"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M3 17v-2a4 4 0 014-4h10a4 4 0 014 4v2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <rect x="7" y="13" width="10" height="8" rx="2" fill="#A1A1AA" />
+              </svg>
+              {totalFee}
+              <svg
+                className={`ml-1 w-4 h-4 transition-transform ${
+                  feeOpen ? "rotate-180" : ""
+                }`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M19 9l-7 7-7-7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+        {/* Fee breakdown (expandable) */}
+        {feeOpen && ((fromAmount && !isNaN(Number(fromAmount)) && Number(fromAmount) > 0) ||
+          (toAmount && !isNaN(Number(toAmount)) && Number(toAmount) > 0)) && (
+          <div className="w-full mt-2">
+            <SwapSummary />
+          </div>
+        )}
       </div>
       <TransactionModal
         open={txModalOpen}
