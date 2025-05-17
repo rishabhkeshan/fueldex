@@ -85,6 +85,25 @@ export const useTokenSwap = () => {
   }, [fromTokenPrice, toTokenPrice]);
 
   /**
+   * Set maximum amount and calculate corresponding toAmount
+   */
+  const setMaxAmount = useCallback((maxAmount: string) => {
+    setFromAmount(maxAmount);
+    
+    const numericValue = parseFloat(maxAmount);
+    
+    if (!isNaN(numericValue) && numericValue > 0 && fromTokenPrice && toTokenPrice && toTokenPrice > 0) {
+      const calculatedAmount = calculateTokenAmount(
+        maxAmount, 
+        fromTokenPrice, 
+        toTokenPrice,
+        'from-to'
+      );
+      setToAmount(calculatedAmount);
+    }
+  }, [fromTokenPrice, toTokenPrice]);
+
+  /**
    * Refresh price data
    */
   const handlePriceRefresh = useCallback(async () => {
@@ -120,6 +139,7 @@ export const useTokenSwap = () => {
     setToToken,
     setFromAmount: handleFromAmountChange,
     setToAmount: handleToAmountChange,
+    setMaxAmount,
     setIsSwapping,
     handleSwapTokens,
     handlePriceRefresh,

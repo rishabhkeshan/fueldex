@@ -42,14 +42,14 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 <path
                   d="M4.10156 15.0007C6.22534 8.23881 12.5425 3.33398 20.0052 3.33398C27.468 3.33398 33.7851 8.23881 35.9089 15.0007M35.9089 15.0007H36.6716V6.66732M35.9089 15.0007H28.3382"
                   stroke="#0E111E"
-                  stroke-width="2"
-                  stroke-linecap="square"
+                  strokeWidth="2"
+                  strokeLinecap="square"
                 />
                 <path
                   d="M35.8988 24.9993C33.775 31.7612 27.4579 36.666 19.9951 36.666C12.5324 36.666 6.21522 31.7612 4.09145 24.9993M4.09145 24.9993H3.32879V33.3327M4.09145 24.9993H11.6621"
                   stroke="#0E111E"
-                  stroke-width="2"
-                  stroke-linecap="square"
+                  strokeWidth="2"
+                  strokeLinecap="square"
                 />
               </svg>
             </div>

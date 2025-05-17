@@ -1,11 +1,21 @@
 import { useState, useCallback } from 'react';
 import { Account } from 'fuels';
 import { TokenData } from '../utils/constants';
+import type { Coin } from "fuels";
+import type { MutableRefObject } from "react";
 
 /**
  * Hook for fetching token balances
  */
-export const useTokenBalance = (wallet: Account | null) => {
+export const useTokenBalance = (
+  wallet: Account | null,
+  ethCoinsRef: MutableRefObject<Coin[]>,
+  btcCoinsRef: MutableRefObject<Coin[]>,
+  usdcCoinsRef: MutableRefObject<Coin[]>,
+  fuelCoinsRef: MutableRefObject<Coin[]>,
+  baseEthCoinsRef: MutableRefObject<Coin[]>
+
+) => {
   const [tokenBalances, setTokenBalances] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +28,8 @@ export const useTokenBalance = (wallet: Account | null) => {
 
     try {
       const balance = await wallet.getBalance(token.assetID);
+      const utxos = await wallet.getCoins(token.assetID);
+      // console.log("utxos", utxos);
       const formattedBalance = balance.format({ units: 9 }).toString();
       
       setTokenBalances(prev => ({
@@ -25,6 +37,14 @@ export const useTokenBalance = (wallet: Account | null) => {
         [token.symbol]: formattedBalance
       }));
       
+      const coinsArray = Array.isArray(utxos) ? utxos : utxos?.coins || [];
+      if (token.symbol === "ETH") ethCoinsRef.current.splice(0, ethCoinsRef.current.length, ...coinsArray);
+      if (token.symbol === "BTC") btcCoinsRef.current.splice(0, btcCoinsRef.current.length, ...coinsArray);
+      if (token.symbol === "USDC") usdcCoinsRef.current.splice(0, usdcCoinsRef.current.length, ...coinsArray);
+      if (token.symbol === "FUEL") fuelCoinsRef.current.splice(0, fuelCoinsRef.current.length, ...coinsArray);
+      if (token.symbol === "BASE_ETH") {
+        baseEthCoinsRef.current.splice(0, baseEthCoinsRef.current.length, ...coinsArray);
+      }
       return formattedBalance;
     } catch (err) {
       console.error(`Error fetching balance for ${token.symbol}:`, err);

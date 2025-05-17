@@ -1,16 +1,16 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useWallet, useIsConnected } from '@fuels/react';
 import SwapInputRow from './SwapInputRow';
-import SwapSummary from './SwapSummary';
 import TokenSelectModal from './TokenSelectModal';
 import ArrowPathIcon from '../../assets/arrowpath.svg';
 import useTokenSwap from '../../hooks/useTokenSwap';
 import useTokenBalance from '../../hooks/useTokenBalance';
 import useFaucet from '../../hooks/useFaucet';
 import { executeSwap } from '../../utils/swap.tsx';
-import { AVAILABLE_TOKENS, TokenData } from '../../utils/constants';
+import { AVAILABLE_TOKENS, TokenData, BASE_ETH_TOKEN } from '../../utils/constants';
 import TransactionModal from './TransactionModal';
 import FaucetModal from './FaucetModal';
+import type { Coin } from "fuels";
 
 const SwapForm: React.FC = () => {
   const { wallet } = useWallet();
@@ -22,6 +22,11 @@ const SwapForm: React.FC = () => {
   const [txModalStatus, setTxModalStatus] = useState<'pending' | 'success'>('pending');
   const [txHash, setTxHash] = useState<string | undefined>(undefined);
 
+  const ethCoinsRef = useRef<Coin[]>([]);
+  const btcCoinsRef = useRef<Coin[]>([]);
+  const usdcCoinsRef = useRef<Coin[]>([]);
+  const fuelCoinsRef = useRef<Coin[]>([]);
+  const baseEthCoinsRef = useRef<Coin[]>([]);
   // Swap logic
   const {
     fromToken,
@@ -35,6 +40,7 @@ const SwapForm: React.FC = () => {
     setToAmount,
     setIsSwapping,
     handleSwapTokens,
+    setMaxAmount,
   } = useTokenSwap();
 
   // Balances
@@ -42,7 +48,13 @@ const SwapForm: React.FC = () => {
     tokenBalances,
     fetchTokenBalance,
     fetchAllBalances,
-  } = useTokenBalance(wallet);
+  } = useTokenBalance(wallet,
+    ethCoinsRef,
+    btcCoinsRef,
+    usdcCoinsRef,
+    fuelCoinsRef,
+    baseEthCoinsRef,
+  );
 
   // Faucet
   const {
@@ -54,7 +66,7 @@ const SwapForm: React.FC = () => {
   // Fetch token balances when wallet changes
   useEffect(() => {
     if (wallet) {
-      fetchAllBalances(AVAILABLE_TOKENS);
+      fetchAllBalances([...AVAILABLE_TOKENS, BASE_ETH_TOKEN]);
     }
   }, [wallet, fetchAllBalances]);
 
@@ -103,17 +115,35 @@ const SwapForm: React.FC = () => {
     setTxModalStatus('pending');
     setIsSwapping(true);
     try {
+      let coinsToUse: Coin[] = [];
+      if (fromToken.symbol === "ETH") coinsToUse = ethCoinsRef.current;
+      if (fromToken.symbol === "BTC") coinsToUse = btcCoinsRef.current;
+      if (fromToken.symbol === "USDC") coinsToUse = usdcCoinsRef.current;
+      if (fromToken.symbol === "FUEL") coinsToUse = fuelCoinsRef.current;
+      let baseEthCoinsToUse: Coin[] = [];
+      baseEthCoinsToUse = baseEthCoinsRef.current;
+
       const tx = await executeSwap({
         wallet,
         fromToken,
         toToken,
-        fromAmount
+        fromAmount,
+        coins: coinsToUse,
+        baseEthCoins: baseEthCoinsToUse,
+        ethCoinsRef,
+        btcCoinsRef,
+        usdcCoinsRef,
+        fuelCoinsRef,
+        baseEthCoinsRef,
       });
       if (tx) {
         setTxModalStatus('success');
         setTxHash(tx.id);
+        setFromAmount("");
+        setToAmount("");
         tx.waitForResult().then(async () => {
-          await fetchAllBalances(AVAILABLE_TOKENS);
+          console.log("Transaction successful");
+          await fetchAllBalances([...AVAILABLE_TOKENS, BASE_ETH_TOKEN]);
         });
       } else {
         setTxModalOpen(false);
@@ -156,9 +186,10 @@ const SwapForm: React.FC = () => {
               Balance: {tokenBalances[fromToken.symbol] || "0.000000"}
               <span
                 className="ml-1 underline cursor-pointer text-[#181A22] font-semibold"
-                onClick={() =>
-                  setFromAmount(tokenBalances[fromToken.symbol] || "")
-                }
+                onClick={() => {
+                  const maxAmount = (tokenBalances[fromToken.symbol] || "0.000000").replace(/,/g, "");
+                  setMaxAmount(maxAmount);
+                }}
               >
                 MAX
               </span>
@@ -217,20 +248,20 @@ const SwapForm: React.FC = () => {
           </div>
 
           {/* Fees summary */}
-          <SwapSummary />
+          {/* <SwapSummary /> */}
         </div>
       </form>
       {/* Place Order Button and info below the form */}
-      <div className="w-10/12 sm:w-11/12 max-w-md mx-auto flex flex-col items-center mt-2 sm:mt-4">
+      <div className="w-11/12 sm:w-full max-w-xl mx-auto flex flex-col items-center mt-2">
         <button
           type="button"
           className={`w-full ${
-            isConnected ? "bg-[#181A22]" : "bg-[#A1A1AA]"
+            isConnected && parseFloat(fromAmount) > 0 ? "bg-[#181A22]" : "bg-[#A1A1AA]"
           } text-white rounded-lg py-3 sm:py-4 font-bold text-base sm:text-lg mt-4 cursor-pointer disabled:cursor-not-allowed`}
-          disabled={isSwapping || !wallet || !fromAmount}
+          disabled={isSwapping || !wallet || parseFloat(fromAmount) <= 0}
           onClick={handleSwap}
         >
-          {isSwapping ? "Swapping..." : "Place Order"}
+          {isSwapping ? "Swapping..." : parseFloat(fromAmount) > 0 ? "Place Order" : "Enter an Amount"}
         </button>
         <div className="text-center text-xs sm:text-sm text-[#A1A1AA] mt-2">
           {wallet ? "" : "Connect your wallet to proceed"}

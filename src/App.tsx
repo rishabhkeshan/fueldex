@@ -8,7 +8,7 @@ function App() {
       <div className="absolute top-0 left-0 w-full h-1/2 bg-[#FCF8F2]" />
       <div className="absolute bottom-0 left-0 w-full h-1/2 bg-[#FCF8F2] sm:bg-[#EAEBDB]" />
       <Header />
-      <main className="z-10 relative flex-1 flex flex-col min-h-0 sm:justify-center sm:-mt-10">
+      <main className="relative flex-1 flex flex-col min-h-0 sm:justify-center sm:-mt-28 z-0">
         <Swap/>
       </main>
     </div>

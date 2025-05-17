@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react';
-import { bn, Account } from 'fuels';
+import { useState, useCallback, useEffect } from 'react';
+import { bn, Account, WalletUnlocked, Provider } from 'fuels';
 import { toast } from 'react-hot-toast';
-import { TokenData, BASE_URL, ETH_MINT_THRESHOLD } from '../utils/constants';
+import { TokenData, BASE_URL, ETH_MINT_THRESHOLD, BASE_ASSET_ID } from '../utils/constants';
 import { mintToken } from '../utils/token';
 import axios from 'axios';
+import { Wallet } from 'fuels';
 
 /**
  * Hook for token fauceting operations
@@ -40,7 +41,7 @@ export const useFaucet = (wallet: Account | null, onSuccess?: () => Promise<void
     
     try {
       // Find ETH token data to get its asset ID
-      const ethToken = await wallet.provider.getBaseAssetId();
+      const ethToken = "0xcb6e26678af543595ff091dccb3697a8216afaf26e802b5debdac5a7b7dd9bd3";
       
       // Check current ETH balance
       const ethBalance = await wallet.getBalance(ethToken);
@@ -91,28 +92,51 @@ export const useFaucet = (wallet: Account | null, onSuccess?: () => Promise<void
    */
   const transferBaseETH = useCallback(async () => {
     if (!wallet) return;
-    
-    try {
-      const baseAssetId = await wallet.provider.getBaseAssetId();
-      const balance = await wallet.getBalance(baseAssetId);
-      
-      if (balance.lt(bn(2900000))) {
-        console.log("Transferring base ETH...");
-        
-        // This is just a placeholder - real implementation would differ
-        // This assumes there's an endpoint to request base ETH
-        await axios.post(`${BASE_URL}/request-base-eth`, {
-          address: wallet.address.toB256(),
-        });
-        
-        return true;
+    // console.log("Transferring base ETH...");
+    const ETHBalance = await wallet.getBalance(BASE_ASSET_ID);
+    if (ETHBalance.lt(2900000)) {
+      try {
+        const provider = new Provider("https://testnet.fuel.network/v1/graphql");
+        const transferWallet: WalletUnlocked = Wallet.fromPrivateKey(
+          "0x2822e732c67f525cdf1df36a92a69fa16fcd25e1eee3e5be604b386ca6a5898d",
+          provider
+        );
+        const baseAssetId = await provider.getBaseAssetId();
+        const tx = await transferWallet.transfer(wallet.address, 3000000, baseAssetId);
+        tx.waitForResult();
+        // console.log("final", final);
+      } catch (error) {
+        console.error("Error transferring fuel:", error);
       }
-      
-      return false; // No transfer needed
-    } catch (error) {
-      console.error("Error transferring base ETH:", error);
-      return false;
     }
+  }, [wallet]);
+
+  // Monitor and maintain base ETH for gas
+  useEffect(() => {
+    if (!wallet) return;
+
+    let timeoutId: number;
+
+    const checkBalanceAndTransfer = async () => {
+      const ETHBalance = await wallet.getBalance(BASE_ASSET_ID);
+      if (ETHBalance.lt(2900000)) {
+        await transferBaseETH();
+        // If balance is low, check again in 2 seconds
+        timeoutId = window.setTimeout(checkBalanceAndTransfer, 2000);
+      } else {
+        // If balance is sufficient, wait 30 seconds before next check
+        timeoutId = window.setTimeout(checkBalanceAndTransfer, 30000);
+      }
+    };
+
+    // Initial check
+    checkBalanceAndTransfer();
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [wallet]);
 
   return {

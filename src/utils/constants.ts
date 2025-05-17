@@ -54,5 +54,14 @@ export const AVAILABLE_TOKENS: TokenData[] = [
     iconBg: "",
   },
 ];
+export const BASE_ETH_TOKEN = {
+  name: "Ethereum",
+  symbol: "BASE_ETH",
+  icon: ETHIcon,
+  balance: "0.476402",
+  assetID: BASE_ASSET_ID,
+  usdValue: "1,482.29",
+  iconBg: "",
+}
 
 export const ETH_MINT_THRESHOLD = 100000000; 

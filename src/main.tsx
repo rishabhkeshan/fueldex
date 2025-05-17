@@ -19,7 +19,6 @@ import { CHAIN_IDS, Provider } from "fuels";
 import { createConfig, http, injected } from "@wagmi/core";
 import { walletConnect } from "@wagmi/connectors";
 import type { Config as WagmiConfig } from "@wagmi/core";
-import { WagmiProvider } from "wagmi";
 const FUEL_PROVIDER_URL = "https://testnet.fuel.network/v1/graphql";
 const FUEL_CONFIG = createFuelConfig(() => {
   const WalletConnectProjectId = "35b967d8f17700b2de24f0abee77e579";
@@ -39,6 +38,7 @@ const FUEL_CONFIG = createFuelConfig(() => {
           url: "https://fuel-dex.vercel.app/",
           icons: ["https://connectors.fuel.network/logo_white.png"],
         },
+        showQrModal: false,
       }),
     ],
   });
