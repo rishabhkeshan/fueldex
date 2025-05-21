@@ -10,8 +10,9 @@ import { executeSwap } from '../../utils/swap.tsx';
 import { AVAILABLE_TOKENS, TokenData, BASE_ETH_TOKEN } from '../../utils/constants';
 import TransactionModal from './TransactionModal';
 import FaucetModal from './FaucetModal';
-import { type Coin } from "fuels";
+import { bn, type Coin } from "fuels";
 import SwapSummary from './SwapSummary';
+import { usePreCalculateSwap } from '../../hooks/usePreCalculateSwap';
 
 const SwapForm: React.FC = () => {
   const { wallet } = useWallet();
@@ -23,6 +24,8 @@ const SwapForm: React.FC = () => {
   const [txModalStatus, setTxModalStatus] = useState<'pending' | 'success'>('pending');
   const [txHash, setTxHash] = useState<string | undefined>(undefined);
   const [feeOpen, setFeeOpen] = useState(false);
+  const [lastSuccessfulSwapAmount, setLastSuccessfulSwapAmount] = useState<string>('');
+  const [lastSuccessfulSwapToAmount, setLastSuccessfulSwapToAmount] = useState<string>('');
 
   const ethCoinsRef = useRef<Coin[]>([]);
   const btcCoinsRef = useRef<Coin[]>([]);
@@ -55,11 +58,7 @@ const SwapForm: React.FC = () => {
     fetchTokenBalance,
     fetchAllBalances,
   } = useTokenBalance(wallet,
-    ethCoinsRef,
-    btcCoinsRef,
-    usdcCoinsRef,
-    fuelCoinsRef,
-    baseEthCoinsRef,
+
   );
 
   // Faucet
@@ -114,6 +113,14 @@ const SwapForm: React.FC = () => {
     };
   }, [transferBaseETH, wallet]);
 
+  // Add pre-calculation hook
+  const { isPreCalculatedRef, assembledRequestRef } = usePreCalculateSwap({
+    fromToken,
+    toToken,
+    fromAmount,
+    bnToAmount: bn.parseUnits("0", 9),
+  });
+
   // Handle swap button click
   const handleSwap = async () => {
     if (!wallet || !fromAmount) return;
@@ -121,6 +128,21 @@ const SwapForm: React.FC = () => {
     setTxModalStatus('pending');
     setIsSwapping(true);
     try {
+      // Wait for pre-calculation to complete
+      const waitForPreCalculation = () => {
+        return new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (isPreCalculatedRef.current && assembledRequestRef.current) {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 100); // Check every 100ms
+        });
+      };
+
+      // Wait for pre-calculation to complete
+      await waitForPreCalculation();
+
       let coinsToUse: Coin[] = [];
       if (fromToken.symbol === "ETH") coinsToUse = ethCoinsRef.current;
       if (fromToken.symbol === "BTC") coinsToUse = btcCoinsRef.current;
@@ -128,12 +150,13 @@ const SwapForm: React.FC = () => {
       if (fromToken.symbol === "FUEL") coinsToUse = fuelCoinsRef.current;
       let baseEthCoinsToUse: Coin[] = [];
       baseEthCoinsToUse = baseEthCoinsRef.current;
-
+      const bnToAmount = bn.parseUnits("0", 9);
       const tx = await executeSwap({
         wallet,
         fromToken,
         toToken,
         fromAmount,
+        bnToAmount,
         coins: coinsToUse,
         baseEthCoins: baseEthCoinsToUse,
         ethCoinsRef,
@@ -141,16 +164,16 @@ const SwapForm: React.FC = () => {
         usdcCoinsRef,
         fuelCoinsRef,
         baseEthCoinsRef,
+        preCalculatedRequest: assembledRequestRef.current || undefined,
       });
       if (tx) {
+        setLastSuccessfulSwapAmount(fromAmount);
+        setLastSuccessfulSwapToAmount(bn(tx.buyTokenAmount).formatUnits(toToken.decimals).toString());
         setTxModalStatus('success');
-        setTxHash(tx.id);
+        setTxHash(tx.transactionId);
         setFromAmount("");
         setToAmount("");
-        tx.waitForResult().then(async () => {
-          console.log("Transaction successful");
-          await fetchAllBalances([...AVAILABLE_TOKENS, BASE_ETH_TOKEN]);
-        });
+        await fetchAllBalances([...AVAILABLE_TOKENS, BASE_ETH_TOKEN]);
       } else {
         setTxModalOpen(false);
       }
@@ -182,6 +205,15 @@ const SwapForm: React.FC = () => {
   }
   const totalFee = '$0.38'; // TODO: get real fee
 
+  // Helper function to calculate and format dollar value
+  const calculateDollarValue = (amount: string, price: number | null | undefined): string => {
+    if (!amount || isNaN(Number(amount)) || !price) return '$0.00';
+    return `$${(Number(amount) * price).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 3,
+    })}`;
+  };
+
   return (
     <>
       <FaucetModal open={isMinting} />
@@ -202,7 +234,7 @@ const SwapForm: React.FC = () => {
         <div className="flex flex-col gap-2 sm:gap-4">
           {/* From label and balance */}
           <div className="flex justify-between items-center text-xs sm:text-sm text-[#A1A1AA] -mb-1 sm:-mb-3">
-            <span>From</span>
+            <span className="text-[#0E111E]">From</span>
             <span>
               Balance: {tokenBalances[fromToken.symbol] || "0.000000"}
               <span
@@ -230,7 +262,7 @@ const SwapForm: React.FC = () => {
             placeholder="Choose coin"
           />
           <div className="flex justify-end text-xs sm:text-sm text-[#A1A1AA] -mt-1 sm:-mt-3">
-            $0.00
+            {calculateDollarValue(fromAmount, fromTokenPrice)}
           </div>
 
           {/* Swap icon divider */}
@@ -249,7 +281,7 @@ const SwapForm: React.FC = () => {
           {/* To label and input row */}
           <div className="flex flex-col gap-2">
             <div className="flex justify-between items-center text-xs sm:text-sm text-[#A1A1AA]">
-              <span>To</span>
+              <span className="text-[#0E111E]">To</span>
               <span>
                 Balance: {tokenBalances[toToken.symbol] || "0.000000"}
               </span>
@@ -267,11 +299,8 @@ const SwapForm: React.FC = () => {
             />
           </div>
           <div className="flex justify-end text-xs sm:text-sm text-[#A1A1AA] -mt-1 sm:-mt-3">
-            $0.00
+            {calculateDollarValue(toAmount, toTokenPrice)}
           </div>
-
-          {/* Fees summary */}
-          {/* <SwapSummary /> */}
         </div>
       </form>
       {/* Place Order Button and info below the form */}
@@ -279,25 +308,35 @@ const SwapForm: React.FC = () => {
         <button
           type="button"
           className={`w-full ${
-            isConnected && parseFloat(fromAmount) > 0
+            isConnected && parseFloat(fromAmount) > 0 && 
+            bn.parseUnits(fromAmount, fromToken.decimals).lte(bn.parseUnits(tokenBalances[fromToken.symbol] || "0", fromToken.decimals))
               ? "bg-[#181A22]"
               : "bg-[#A1A1AA]"
           } text-white rounded-lg py-3 sm:py-4 font-bold text-base sm:text-lg mt-4 cursor-pointer disabled:cursor-not-allowed`}
-          disabled={isSwapping || !wallet || parseFloat(fromAmount) <= 0}
+          disabled={
+            isSwapping || 
+            !wallet || 
+            parseFloat(fromAmount) <= 0 || 
+            bn.parseUnits(fromAmount, fromToken.decimals).gt(bn.parseUnits(tokenBalances[fromToken.symbol] || "0", fromToken.decimals))
+          }
           onClick={handleSwap}
         >
           {isSwapping
             ? "Swapping..."
-            : parseFloat(fromAmount) > 0
-            ? "Place Order"
-            : "Enter an Amount"}
+            : !wallet
+            ? "Connect Wallet"
+            : parseFloat(fromAmount) <= 0 || fromAmount === ""
+            ? "Enter an Amount"
+            : bn.parseUnits(fromAmount, fromToken.decimals).gt(bn.parseUnits(tokenBalances[fromToken.symbol] || "0", fromToken.decimals))
+            ? "Insufficient Balance"
+            : "Place Order"}
         </button>
         <div className="text-center text-xs sm:text-sm text-[#A1A1AA] mt-2">
           {wallet ? "" : "Connect your wallet to proceed"}
         </div>
         {/* Price info row: always visible */}
         <div className="w-full flex items-center justify-between px-1">
-          <div className="text-[#A1A1AA] text-xs font-medium flex items-center">
+          <div className="text-[#0E111E] text-xs font-medium flex items-center">
             1 {fromToken.symbol} ={" "}
             {arePricesLoading ? (
               <svg
@@ -329,11 +368,13 @@ const SwapForm: React.FC = () => {
             )}
           </div>
           {/* Fee summary and dropdown: only if amount is valid */}
-          {((fromAmount && !isNaN(Number(fromAmount)) && Number(fromAmount) > 0) ||
+          {((fromAmount &&
+            !isNaN(Number(fromAmount)) &&
+            Number(fromAmount) > 0) ||
             (toAmount && !isNaN(Number(toAmount)) && Number(toAmount) > 0)) && (
             <button
               type="button"
-              className="flex items-center text-[#A1A1AA] text-xs font-medium hover:opacity-80"
+              className="flex items-center text-[#A1A1AA] text-xs font-medium hover:opacity-80 outline-none"
               onClick={() => setFeeOpen((o) => !o)}
             >
               <svg
@@ -348,7 +389,14 @@ const SwapForm: React.FC = () => {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                <rect x="7" y="13" width="10" height="8" rx="2" fill="#A1A1AA" />
+                <rect
+                  x="7"
+                  y="13"
+                  width="10"
+                  height="8"
+                  rx="2"
+                  fill="#A1A1AA"
+                />
               </svg>
               {totalFee}
               <svg
@@ -370,19 +418,27 @@ const SwapForm: React.FC = () => {
           )}
         </div>
         {/* Fee breakdown (expandable) */}
-        {feeOpen && ((fromAmount && !isNaN(Number(fromAmount)) && Number(fromAmount) > 0) ||
-          (toAmount && !isNaN(Number(toAmount)) && Number(toAmount) > 0)) && (
-          <div className="w-full mt-2">
-            <SwapSummary />
-          </div>
-        )}
+        {feeOpen &&
+          ((fromAmount &&
+            !isNaN(Number(fromAmount)) &&
+            Number(fromAmount) > 0) ||
+            (toAmount && !isNaN(Number(toAmount)) && Number(toAmount) > 0)) && (
+            <div className="w-full mt-2">
+              <SwapSummary />
+            </div>
+          )}
       </div>
       <TransactionModal
         open={txModalOpen}
         status={txModalStatus}
-        onClose={() => setTxModalOpen(false)}
-        fromAmount={fromAmount}
+        onClose={() => {
+          setTxModalOpen(false);
+          setLastSuccessfulSwapAmount('');
+          setLastSuccessfulSwapToAmount('');
+        }}
+        fromAmount={txModalStatus === 'success' ? lastSuccessfulSwapAmount : fromAmount}
         fromSymbol={fromToken.symbol}
+        toAmount={txModalStatus === 'success' ? lastSuccessfulSwapToAmount : toAmount}
         toSymbol={toToken.symbol}
         txHash={txHash}
       />

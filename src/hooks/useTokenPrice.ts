@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { BASE_URL } from '../utils/constants';
 
 /**
@@ -9,6 +9,8 @@ export const useTokenPrice = () => {
   const [toTokenPrice, setToTokenPrice] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentFromSymbol, setCurrentFromSymbol] = useState<string>('');
+  const [currentToSymbol, setCurrentToSymbol] = useState<string>('');
 
   /**
    * Fetch token prices for trading pair
@@ -16,6 +18,8 @@ export const useTokenPrice = () => {
   const fetchTokenPrices = useCallback(async (fromSymbol: string, toSymbol: string) => {
     setIsLoading(true);
     setError(null);
+    setCurrentFromSymbol(fromSymbol);
+    setCurrentToSymbol(toSymbol);
 
     try {
       const [fromResponse, toResponse] = await Promise.all([
@@ -49,6 +53,22 @@ export const useTokenPrice = () => {
       setIsLoading(false);
     }
   }, []);
+
+  // Set up interval for price updates
+  useEffect(() => {
+    if (!currentFromSymbol || !currentToSymbol) return;
+
+    // Initial fetch
+    fetchTokenPrices(currentFromSymbol, currentToSymbol);
+
+    // Set up interval for subsequent fetches
+    const intervalId = setInterval(() => {
+      fetchTokenPrices(currentFromSymbol, currentToSymbol);
+    }, 10000); // 10 seconds
+
+    // Cleanup interval on unmount or when symbols change
+    return () => clearInterval(intervalId);
+  }, [currentFromSymbol, currentToSymbol, fetchTokenPrices]);
 
   return {
     fromTokenPrice,

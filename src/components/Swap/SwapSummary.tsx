@@ -3,8 +3,8 @@ import React from 'react';
 const SwapSummary: React.FC = () => {
   // Example values
   const swapFeePercent = '0.01%';
-  const swapFeeValue = '$0.01';
-  const networkFee = '$0.002';
+  const swapFeeValue = '$0.21';
+  const networkFee = '$0.17';
 
   return (
     <div className="w-full">

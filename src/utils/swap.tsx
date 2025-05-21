@@ -1,9 +1,19 @@
 import React, { MutableRefObject } from "react";
-import { Account, Address, bn, ScriptTransactionRequest, Coin } from "fuels";
+import {
+  Account,
+  bn,
+  ScriptTransactionRequest,
+  Coin,
+  Provider,
+  BN,
+  Wallet,
+  TransactionRequest,
+} from "fuels";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { BASE_URL } from "./constants";
+import { BASE_URL, FUEL_PROVIDER_URL } from "./constants";
 import { logTime } from "./timeLogger";
+import { OrderbookPredicate } from "../out";
 
 interface SwapParams {
   wallet: Account;
@@ -13,8 +23,10 @@ interface SwapParams {
   };
   toToken: {
     symbol: string;
+    assetID: string;
   };
   fromAmount: string;
+  bnToAmount: BN;
   coins?: Coin[];
   baseEthCoins?: Coin[];
   ethCoinsRef: MutableRefObject<Coin[]>;
@@ -22,6 +34,7 @@ interface SwapParams {
   usdcCoinsRef: MutableRefObject<Coin[]>;
   fuelCoinsRef: MutableRefObject<Coin[]>;
   baseEthCoinsRef: MutableRefObject<Coin[]>;
+  preCalculatedRequest?: TransactionRequest;
 }
 
 /**
@@ -32,13 +45,8 @@ export const executeSwap = async ({
   fromToken,
   toToken,
   fromAmount,
-  coins,
-  baseEthCoins,
-  ethCoinsRef,
-  btcCoinsRef,
-  usdcCoinsRef,
-  fuelCoinsRef,
-  baseEthCoinsRef,
+  bnToAmount,
+  preCalculatedRequest,
 }: SwapParams) => {
   logTime(
     "swap_initiated",
@@ -51,140 +59,89 @@ export const executeSwap = async ({
   }
 
   try {
-    const scriptTransactionRequest = new ScriptTransactionRequest();
-    logTime("create_transaction_request");
+    const provider = new Provider(FUEL_PROVIDER_URL);
 
-    // Add passed-in coins as resources if provided
-    if (coins && coins.length > 0) {
-      const coinResources = coins.map((coin) => ({
-        id: coin.id,
-        assetId: coin.assetId,
-        amount: bn(coin.amount),
-        owner: wallet.address,
-        blockCreated: bn(coin.blockCreated ?? 0),
-        txCreatedIdx: bn(coin.txCreatedIdx ?? 0),
-      }));
-      scriptTransactionRequest.addResources(coinResources);
+    // Get burner wallet private key from local storage
+    const burnerPrivateKey = localStorage.getItem("burner-wallet-private-key");
+    if (!burnerPrivateKey) {
+      throw new Error("Burner wallet private key not found");
     }
-    logTime("get_resources");
 
-    if (baseEthCoins && baseEthCoins.length > 0) {
-      const baseEthResources = baseEthCoins.map((coin) => ({
-        id: coin.id,
-        assetId: coin.assetId,
-        amount: bn(coin.amount),
-        owner: wallet.address,
-        blockCreated: bn(coin.blockCreated ?? 0),
-        txCreatedIdx: bn(coin.txCreatedIdx ?? 0),
-      }));
-      scriptTransactionRequest.addResources(baseEthResources);
-    }
-    logTime("get_base_resources");
-
-    const sellTokenAmount = bn.parseUnits(fromAmount, 9);
-
-    // const baseResources = await wallet.getResourcesToSpend([
-    //   {
-    //     assetId: await wallet.provider.getBaseAssetId(),
-    //     amount: bn(2000000),
-    //   },
-    // ]);
-    // logTime('get_base_resources_end');
-
-    // scriptTransactionRequest.addResources(baseResources);
-
-    const solverAddress = Address.fromB256(
-      "0xf8cf8acbe8b4d970c3e1c9ffed11e8b55abfc5287ad7f5e4d0240a4f0651d658"
-    );
-    scriptTransactionRequest.addCoinOutput(
-      solverAddress,
-      sellTokenAmount,
-      fromToken.assetID
-    );
-    scriptTransactionRequest.addChangeOutput(wallet.address, fromToken.assetID);
-
-    logTime("fill_order_request_start");
-
-    const { data } = await axios.post(`${BASE_URL}/fill-order`, {
-      scriptRequest: scriptTransactionRequest.toJSON(),
-      sellTokenName: fromToken.symbol.toLowerCase(),
-      buyTokenName: toToken.symbol.toLowerCase(),
-      sellTokenAmount: sellTokenAmount.toString(),
-      recepientAddress: wallet.address.toB256(),
+    // Create burner wallet instance
+    const burnerWallet = Wallet.fromPrivateKey(burnerPrivateKey, provider);
+    const orderPredicate = new OrderbookPredicate({
+      configurableConstants: {
+        ASSET_ID_GET: toToken.assetID,
+        ASSET_ID_SEND: fromToken.assetID,
+        MINIMAL_OUTPUT_AMOUNT: bnToAmount,
+        RECEPIENT: burnerWallet.address.b256Address,
+      },
+      data: [1],
+      provider,
     });
-    logTime("fill_order_request_end");
 
-    const responseRequest = new ScriptTransactionRequest();
-    Object.assign(responseRequest, data.request);
+    let assembledRequest = preCalculatedRequest;
+
+    // If no pre-calculated request, calculate it now
+    if (!assembledRequest) {
+      console.log("Calculating request...");
+      const scriptTransactionRequest = new ScriptTransactionRequest();
+      const sellTokenAmount = bn.parseUnits(fromAmount, 9);
+      burnerWallet.addTransfer(scriptTransactionRequest, {
+        destination: orderPredicate.address,
+        amount: sellTokenAmount,
+        assetId: fromToken.assetID,
+      });
+      const result = await provider.assembleTx({
+        request: scriptTransactionRequest,
+        feePayerAccount: burnerWallet,
+        accountCoinQuantities: [
+          {
+            account: burnerWallet,
+            amount: sellTokenAmount,
+            assetId: fromToken.assetID,
+          },
+        ],
+      });
+      assembledRequest = result.assembledRequest;
+    }
+    await burnerWallet.populateTransactionWitnessesSignature(assembledRequest);
+
+    const txid = assembledRequest.getTransactionId(0);
 
     logTime("send_transaction_start");
-    const tx = await toast.promise(
+    const response = await toast.promise(
       (async () => {
-        const tx = await wallet.sendTransaction(responseRequest);
-        if (!tx) throw new Error("Failed to send transaction");
-        logTime("pre_confirmation_start");
-        const preConfirmation = await tx.waitForPreConfirmation();
-              if (preConfirmation.resolvedOutputs) {
-                // Filter to only get the output with ETH assetId
-                const ethOutput = preConfirmation.resolvedOutputs.find(
-                  (output) =>
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    (output.output as any).assetId ===
-                      "0xf8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07" &&
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    (output.output as any).to === wallet.address.toB256()
-                );
-                if (ethOutput) {
-                  const ethCoin = {
-                    id: ethOutput.utxoId,
-                    assetId: ethOutput.output.assetId,
-                    amount: ethOutput.output.amount,
-                    owner: wallet.address,
-                    blockCreated: bn(0),
-                    txCreatedIdx: bn(0),
-                  };
-                  baseEthCoinsRef.current = [ethCoin];
-                }
-                const fromOutput = preConfirmation.resolvedOutputs.find(
-                  (output) =>
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    (output.output as any).assetId === fromToken.assetID &&
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    (output.output as any).to === wallet.address.toB256()
-                );
-                if (fromOutput) {
-                  const fromCoin = {
-                    id: fromOutput.utxoId,
-                    assetId: fromOutput.output.assetId,
-                    amount: fromOutput.output.amount,
-                    owner: wallet.address,
-                    blockCreated: bn(0),
-                    txCreatedIdx: bn(0),
-                  };
-                  if (fromToken.symbol === "ETH") ethCoinsRef.current = [fromCoin];
-                  if (fromToken.symbol === "BTC") btcCoinsRef.current = [fromCoin];
-                  if (fromToken.symbol === "USDC") usdcCoinsRef.current = [fromCoin];
-                  if (fromToken.symbol === "FUEL") fuelCoinsRef.current = [fromCoin];
-                }
-              }
-        logTime("pre_confirmation_end");
-        return tx;
+        logTime("fill_order_request_start");
+
+        const { data } = await axios.post(`${BASE_URL}/fill-order`, {
+          sellTokenName: fromToken.symbol.toLowerCase(),
+          sellTokenAmount: bn.parseUnits(fromAmount, 9).toString(),
+          recepientAddress: burnerWallet.address.b256Address,
+          buyTokenName: toToken.symbol.toLowerCase(),
+          predicateAddress: orderPredicate.address,
+          minimalBuyAmount: bnToAmount,
+          predicateScriptRequest: assembledRequest.toJSON(),
+        });
+        console.log("data", data);
+        logTime("fill_order_request_end");
+        return data;
       })(),
       {
         loading: "Swapping tokens...",
-        success: (tx) => {
+        success: () => {
           logTime("send_transaction_success");
           return (
             <span>
               Swap successful!
               <br />
               <a
-                href={`https://app-testnet.fuel.network/tx/${tx.id}`}
+                href={`https://app-testnet.fuel.network/tx/${txid}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ textDecoration: "underline" }}
               >
-                {tx.id.substring(0, 8)}...{tx.id.substring(tx.id.length - 8)}
+                {txid.substring(0, 8)}...{txid.substring(txid.length - 8)}
               </a>
             </span>
           );
@@ -195,10 +152,11 @@ export const executeSwap = async ({
         },
       }
     );
-    logTime("swap_completed", `Transaction ID: ${tx.id}`);
-    console.log("Pre confirmation:", tx);
+    logTime("swap_completed", `Transaction ID: ${txid}`);
+    console.log("Pre confirmation:", response);
 
-    return tx;
+    return response;
+
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";

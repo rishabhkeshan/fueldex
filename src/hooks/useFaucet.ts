@@ -5,6 +5,7 @@ import { TokenData, BASE_URL, ETH_MINT_THRESHOLD, BASE_ASSET_ID } from '../utils
 import { mintToken } from '../utils/token';
 import axios from 'axios';
 import { Wallet } from 'fuels';
+import { FUEL_PROVIDER_URL } from '../utils/constants';
 
 /**
  * Hook for token fauceting operations
@@ -96,7 +97,7 @@ export const useFaucet = (wallet: Account | null, onSuccess?: () => Promise<void
     const ETHBalance = await wallet.getBalance(BASE_ASSET_ID);
     if (ETHBalance.lt(2900000)) {
       try {
-        const provider = new Provider("https://testnet.fuel.network/v1/graphql");
+        const provider = new Provider(FUEL_PROVIDER_URL);
         const transferWallet: WalletUnlocked = Wallet.fromPrivateKey(
           "0x2822e732c67f525cdf1df36a92a69fa16fcd25e1eee3e5be604b386ca6a5898d",
           provider

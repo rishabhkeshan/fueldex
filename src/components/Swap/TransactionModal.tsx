@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 
 interface TransactionModalProps {
   open: boolean;
@@ -6,29 +6,41 @@ interface TransactionModalProps {
   onClose: () => void;
   fromAmount: string;
   fromSymbol: string;
+  toAmount: string;
   toSymbol: string;
   txHash?: string;
 }
 
 const TransactionModal: React.FC<TransactionModalProps> = ({
-  open, status, onClose, fromAmount, fromSymbol, toSymbol, txHash
+  open, status, onClose, fromAmount, fromSymbol, toAmount, toSymbol, txHash
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      // Only allow closing by clicking outside if transaction is complete
+      if (status === 'success' && modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    }
+
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [open, status, onClose]);
+
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="relative bg-[#F5F6E7] rounded-2xl shadow-xl w-full max-w-md mx-4 p-8 flex flex-col items-center">
-        <button
-          className="absolute top-4 right-4 text-2xl text-[#181A22] hover:opacity-70"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          &times;
-        </button>
-        {status === "pending" ? (
+      <div ref={modalRef} className="relative bg-[#F5F6E7] rounded-2xl shadow-xl w-full max-w-md mx-4 p-8 flex flex-col items-center">
+        {status === 'pending' ? (
           <>
             <div className="mb-4 text-center text-lg">
-              Swapping {fromAmount} {fromSymbol} to {toSymbol}
+              Swapping {fromAmount} {fromSymbol} to {toAmount} {toSymbol}
             </div>
             <div className="my-6">
               <svg
@@ -62,8 +74,15 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
           </>
         ) : (
           <>
+            <button
+              className="absolute top-4 right-4 text-2xl text-[#181A22] hover:opacity-70"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              &times;
+            </button>
             <div className="mb-4 text-center text-lg">
-              {fromAmount} {fromSymbol} to {toSymbol}
+            Swapped {fromAmount} {fromSymbol} to {toAmount} {toSymbol}
             </div>
             <div className="my-6">
               <svg width={64} height={64} viewBox="0 0 24 24" fill="none">

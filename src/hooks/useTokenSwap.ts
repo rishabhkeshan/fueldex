@@ -21,14 +21,35 @@ export const useTokenSwap = () => {
     fetchTokenPrices 
   } = useTokenPrice();
 
-  // Initialize token prices on token change
+  // Helper function to update amounts based on prices
+  const updateAmountsWithPrices = useCallback((
+    currentFromAmount: string,
+    currentFromPrice: number | null,
+    currentToPrice: number | null
+  ) => {
+    if (currentFromAmount && !isNaN(Number(currentFromAmount)) && Number(currentFromAmount) > 0 
+        && currentFromPrice && currentToPrice && currentToPrice > 0) {
+      const calculatedAmount = calculateTokenAmount(
+        currentFromAmount,
+        currentFromPrice,
+        currentToPrice,
+        'from-to'
+      );
+      setToAmount(calculatedAmount);
+    }
+  }, []);
+
+  // Fetch prices when tokens change
   useEffect(() => {
-    setFromAmount('');
-    setToAmount('');
     if (fromToken && toToken) {
       fetchTokenPrices(fromToken.symbol, toToken.symbol);
     }
   }, [fromToken.symbol, toToken.symbol, fetchTokenPrices]);
+
+  // Update amounts when prices or fromAmount changes
+  useEffect(() => {
+    updateAmountsWithPrices(fromAmount, fromTokenPrice, toTokenPrice);
+  }, [fromAmount, fromTokenPrice, toTokenPrice, updateAmountsWithPrices]);
 
   /**
    * Handle swapping token positions
@@ -38,9 +59,12 @@ export const useTokenSwap = () => {
       setToToken(prevFromToken);
       return toToken;
     });
-    setFromAmount('');
-    setToAmount('');
-  }, [toToken]);
+    // Swap amounts as well
+    setFromAmount(prevFromAmount => {
+      setToAmount(prevFromAmount);
+      return toAmount;
+    });
+  }, [toToken, toAmount]);
 
   /**
    * Handle "from" amount change
@@ -48,20 +72,13 @@ export const useTokenSwap = () => {
   const handleFromAmountChange = useCallback((value: string) => {
     setFromAmount(value);
     
-    const numericValue = parseFloat(value);
-    
-    if (!isNaN(numericValue) && numericValue > 0 && fromTokenPrice && toTokenPrice && toTokenPrice > 0) {
-      const calculatedAmount = calculateTokenAmount(
-        value, 
-        fromTokenPrice, 
-        toTokenPrice,
-        'from-to'
-      );
-      setToAmount(calculatedAmount);
-    } else if (value === '' || numericValue === 0) {
+    if (value === '' || parseFloat(value) === 0) {
       setToAmount('');
+      return;
     }
-  }, [fromTokenPrice, toTokenPrice]);
+    
+    updateAmountsWithPrices(value, fromTokenPrice, toTokenPrice);
+  }, [fromTokenPrice, toTokenPrice, updateAmountsWithPrices]);
 
   /**
    * Handle "to" amount change
@@ -89,41 +106,17 @@ export const useTokenSwap = () => {
    */
   const setMaxAmount = useCallback((maxAmount: string) => {
     setFromAmount(maxAmount);
-    
-    const numericValue = parseFloat(maxAmount);
-    
-    if (!isNaN(numericValue) && numericValue > 0 && fromTokenPrice && toTokenPrice && toTokenPrice > 0) {
-      const calculatedAmount = calculateTokenAmount(
-        maxAmount, 
-        fromTokenPrice, 
-        toTokenPrice,
-        'from-to'
-      );
-      setToAmount(calculatedAmount);
-    }
-  }, [fromTokenPrice, toTokenPrice]);
+    updateAmountsWithPrices(maxAmount, fromTokenPrice, toTokenPrice);
+  }, [fromTokenPrice, toTokenPrice, updateAmountsWithPrices]);
 
   /**
    * Refresh price data
    */
   const handlePriceRefresh = useCallback(async () => {
     if (fromToken && toToken) {
-      // Fetch prices and get the new values
-      const { newFromPrice, newToPrice } = await fetchTokenPrices(fromToken.symbol, toToken.symbol);
-
-      // Recalculate 'toAmount' if 'fromAmount' exists and new prices are valid
-      const currentFromAmount = parseFloat(fromAmount);
-      if (!isNaN(currentFromAmount) && currentFromAmount > 0 && newFromPrice && newToPrice && newToPrice > 0) {
-        const calculatedToAmount = calculateTokenAmount(
-          fromAmount,
-          newFromPrice,
-          newToPrice,
-          'from-to'
-        );
-        setToAmount(calculatedToAmount);
-      }
+      await fetchTokenPrices(fromToken.symbol, toToken.symbol);
     }
-  }, [fromToken, toToken, fromAmount, fetchTokenPrices]);
+  }, [fromToken, toToken, fetchTokenPrices]);
 
   return {
     fromToken,

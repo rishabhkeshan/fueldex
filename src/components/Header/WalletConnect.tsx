@@ -68,7 +68,7 @@ function WalletConnect() {
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen((open) => !open)}
-            className="text-[#181A22] text-base sm:text-lg font-medium cursor-pointer select-all leading-tight px-3 py-1 rounded-lg bg-[#FCF8F2] border border-[#181A22] flex items-center"
+            className="text-[#181A22] text-base sm:text-lg font-medium cursor-pointer leading-tight px-3 py-1 rounded-lg bg-[#FCF8F2] border border-[#181A22] flex items-center"
             title="Account options"
           >
             {address.substring(0, 6)}...{address.substring(address.length - 4)}
@@ -100,7 +100,7 @@ function WalletConnect() {
                 rel="noopener noreferrer"
                 className="block px-4 py-2 text-[#181A22] hover:bg-[#F5F6E7] cursor-pointer"
               >
-                View My Account
+                View Account
               </a>
               <button
                 onClick={() => {

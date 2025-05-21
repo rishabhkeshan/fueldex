@@ -78,7 +78,6 @@ const SwapInputRow: React.FC<SwapInputRowProps> = ({
           />
         </svg>{" "}
       </button>
-      <div className="mx-2 h-6 border-l border-[#181A22]/30" />
 
       {/* Editable Amount */}
       <input
