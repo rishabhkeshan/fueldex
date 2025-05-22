@@ -26,6 +26,7 @@ const SwapForm: React.FC = () => {
   const [feeOpen, setFeeOpen] = useState(false);
   const [lastSuccessfulSwapAmount, setLastSuccessfulSwapAmount] = useState<string>('');
   const [lastSuccessfulSwapToAmount, setLastSuccessfulSwapToAmount] = useState<string>('');
+  const [reassembleRequest, setReassembleRequest] = useState<boolean>(false);
 
   const ethCoinsRef = useRef<Coin[]>([]);
   const btcCoinsRef = useRef<Coin[]>([]);
@@ -119,6 +120,7 @@ const SwapForm: React.FC = () => {
     toToken,
     fromAmount,
     bnToAmount: bn.parseUnits("0", 9),
+    reassembleRequest,
   });
 
   // Handle swap button click
@@ -165,6 +167,8 @@ const SwapForm: React.FC = () => {
         fuelCoinsRef,
         baseEthCoinsRef,
         preCalculatedRequest: assembledRequestRef.current || undefined,
+        reassembleRequest,
+        setReassembleRequest,
       });
       if (tx) {
         setLastSuccessfulSwapAmount(fromAmount);

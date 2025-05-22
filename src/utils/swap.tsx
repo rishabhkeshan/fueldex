@@ -35,6 +35,8 @@ interface SwapParams {
   fuelCoinsRef: MutableRefObject<Coin[]>;
   baseEthCoinsRef: MutableRefObject<Coin[]>;
   preCalculatedRequest?: TransactionRequest;
+  reassembleRequest: boolean;
+  setReassembleRequest: (reassembleRequest: boolean) => void;
 }
 
 /**
@@ -47,6 +49,8 @@ export const executeSwap = async ({
   fromAmount,
   bnToAmount,
   preCalculatedRequest,
+  reassembleRequest,
+  setReassembleRequest,
 }: SwapParams) => {
   logTime(
     "swap_initiated",
@@ -148,6 +152,7 @@ export const executeSwap = async ({
         },
         error: (err) => {
           logTime("send_transaction_error", `Error: ${err.message}`);
+          setReassembleRequest(!reassembleRequest);
           return "Failed to send transaction";
         },
       }

@@ -14,6 +14,7 @@ interface PreCalculateSwapParams {
   };
   fromAmount: string;
   bnToAmount: BN;
+  reassembleRequest: boolean;
 }
 
 export const usePreCalculateSwap = ({
@@ -21,6 +22,7 @@ export const usePreCalculateSwap = ({
   toToken,
   fromAmount,
   bnToAmount,
+  reassembleRequest,
 }: PreCalculateSwapParams) => {
   const [isCalculating, setIsCalculating] = useState(false);
   const [isPreCalculated, setIsPreCalculated] = useState(false);
@@ -74,6 +76,11 @@ export const usePreCalculateSwap = ({
         amount: sellTokenAmount,
         assetId: fromToken.assetID,
       });
+    //   burnerWallet.addTransfer(scriptTransactionRequest, {
+    //     destination: orderPredicate.address,
+    //     amount: "100000",
+    //     assetId: BASE_ASSET_ID,
+    //   });
       const {assembledRequest} = await provider.assembleTx({
         request: scriptTransactionRequest,
         feePayerAccount: burnerWallet,
@@ -98,7 +105,7 @@ export const usePreCalculateSwap = ({
     } finally {
       setIsCalculating(false);
     }
-  }, [fromAmount]);
+  }, [fromAmount, reassembleRequest]);
 
   // Call preCalculateSwap directly when dependencies change
   useEffect(() => {
